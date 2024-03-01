@@ -1,36 +1,41 @@
 package deque;
 
+import org.junit.Test;
+
 public class ArrayDeque<T> implements Deque<T>{
     private int size;
     private int head;
     private int rear;
     private T[] items;
     public ArrayDeque(){
-        T[] items = (T[]) new Object[16];
+        items = (T[]) new Object[16];
         size = 0;
         head = 15;
         rear = 0;
     }
     @Override
     public void addFirst(T item) {
-        items[head = (head - 1) & (items.length - 1)] = item;
+        items[head] = item;
+        head = (head - 1) & (items.length - 1);
         size +=1;
-        if (head == rear){
+        if (size == items.length - 2){
             resize(items.length * 2);
         }
     }
+
     private void resize(int capacity){
         T[] array = (T[]) new Object[capacity];
         System.arraycopy(items,0,array,0,rear);
-        System.arraycopy(items,head,array,array.length - 1 + rear - size,size - rear);
+        System.arraycopy(items,head,array,array.length - 1 + rear - size,size - rear + 1);
         head = array.length - 1 + rear - size;
         items = array;
     }
     @Override
     public void addLast(T item) {
         items[rear] = item;
+        rear = (rear + 1) & (items.length -1 );
         size +=1;
-        if ((rear = (rear + 1) & (items.length - 1)) == head ){
+        if (size == items.length - 2 ){
             resize(items.length * 2);
         }
     }
@@ -64,13 +69,14 @@ public class ArrayDeque<T> implements Deque<T>{
         if (isEmpty()){
             return  null;
         }
-        if (head +1 == items.length){
-            head = 0;
-        }else {
-            head = head + 1;
+        int h = (head + 1) & (items.length -1);
+        T item = items[h];
+        if (item != null){
+            items[h] = null;
+            head = h;
         }
         size -= 1;
-        return items[head];
+        return item;
     }
 
     @Override
@@ -78,13 +84,14 @@ public class ArrayDeque<T> implements Deque<T>{
         if (isEmpty()){
             return null;
         }
-        if (rear - 1 == 0){
-            rear = items.length - 1;
-        }else {
-            rear -= 1;
+        int t = (rear - 1) & (items.length - 1);
+        T item = items[t];
+        if (item != null){
+            items[t] = null;
+            rear = t;
         }
         size -= 1;
-        return items[rear];
+        return item;
     }
 
     @Override

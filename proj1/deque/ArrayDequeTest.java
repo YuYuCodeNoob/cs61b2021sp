@@ -41,6 +41,15 @@ public class ArrayDequeTest {
         assertEquals(2,(int)testDeque.get(2));
         assertEquals(3,(int)testDeque.get(3));
     }
+//    @Test
+//    public void resizeTest(){
+//        ArrayDeque<Integer> testDeque = new ArrayDeque<>();
+//        testDeque.addLast(0);
+//        testDeque.addLast(1);
+//        testDeque.addFirst(2);
+//        testDeque.addFirst(3);
+//        testDeque.resize(32);
+//    }
     @Test
     public void addFirstTest(){
         ArrayDeque<Integer> testDeque = new ArrayDeque<>();
