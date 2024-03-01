@@ -71,6 +71,12 @@ public class ArrayDeque<T> implements Deque<T>{
         if (isEmpty()){
             return  null;
         }
+/*
+* when head == items.length head + 1 == 2 ** n its binary system code 0b1...0
+* items.length binary system code ob01111...111
+* & -> 0b000000000...000
+*
+* */
         int h = (head + 1) & (items.length -1);
         T item = items[h];
         if (item != null){
