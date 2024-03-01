@@ -2,15 +2,17 @@ package deque;
 
 import org.junit.Test;
 
+import java.util.Iterator;
+
 public class ArrayDeque<T> implements Deque<T>{
     private int size;
     private int head;
     private int rear;
     private T[] items;
     public ArrayDeque(){
-        items = (T[]) new Object[16];
+        items = (T[]) new Object[8];
         size = 0;
-        head = 15;
+        head = 7;
         rear = 0;
     }
     @Override
@@ -100,5 +102,21 @@ public class ArrayDeque<T> implements Deque<T>{
             return null;
         }
         return items[(head + index + 1) % items.length];
+    }
+    private class ArrayDequeIterator implements Iterator<T>{
+        int h;
+        ArrayDequeIterator(){
+            h = 0;
+        }
+        public boolean hasNext(){
+            return h < size;
+        }
+
+        @Override
+        public T next() {
+            T result = get(h);
+            h +=1;
+            return result;
+        }
     }
 }
