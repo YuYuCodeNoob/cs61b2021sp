@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import java.util.Iterator;
 
-public class ArrayDeque<T> implements Deque<T>{
+public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
     private int size;
     private int head;
     private int rear;
@@ -109,6 +109,12 @@ public class ArrayDeque<T> implements Deque<T>{
         }
         return items[(head + index + 1) % items.length];
     }
+
+    @Override
+    public Iterator<T> iterator() {
+        return new ArrayDequeIterator();
+    }
+
     private class ArrayDequeIterator implements Iterator<T>{
         int h;
         ArrayDequeIterator(){

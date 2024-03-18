@@ -12,12 +12,21 @@ public class ArrayDequeTest {
         testDeque.addLast(0);
         testDeque.addFirst(2);
         testDeque.addFirst(1);
+        testDeque.addLast(0);
+        testDeque.addFirst(2);
+        testDeque.addFirst(1);
+        testDeque.addLast(0);
+        testDeque.addFirst(2);
+        testDeque.addFirst(1);
+        testDeque.addLast(0);
+        testDeque.addFirst(2);
+        testDeque.addFirst(1);
         int mid = 2;
         int last = 0;
         int first = 1;
         assertEquals(first,(int) testDeque.get(0));
         assertEquals(mid,(int) testDeque.get(1));
-        assertEquals(last,(int) testDeque.get(2));
+        assertEquals(last,(int) testDeque.get(testDeque.size() - 1));
     }
 
     @Test
