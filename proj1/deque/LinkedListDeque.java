@@ -100,11 +100,10 @@ public class LinkedListDeque<T> implements Deque<T>,Iterable<T>{
     @Override
     public String toString(){
         StringBuilder returnString = new StringBuilder("(");
-        for (T item:
-                this) {
-            returnString.append(item.toString());
-            returnString.append(", ");
+        for (int i = 0; i < this.size() - 1; i++) {
+            returnString.append(this.get(i).toString() + ",");
         }
+        returnString.append(this.get(this.size() -1));
         returnString.append(")");
         return returnString.toString();
     }

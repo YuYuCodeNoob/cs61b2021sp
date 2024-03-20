@@ -2,6 +2,9 @@ package deque;
 
 import edu.princeton.cs.algs4.Stopwatch;
 import org.junit.Test;
+
+import java.util.Iterator;
+
 import static org.junit.Assert.*;
 
 
@@ -33,7 +36,18 @@ public class LinkedListDequeTest {
 		System.out.println("Printing out deque: ");
 		lld1.printDeque();
     }
+    @Test
+    public void testAddFirst() {
+        LinkedListDeque<Integer> deque = new LinkedListDeque<>();
+        deque.addFirst(1);
+        deque.addFirst(2);
+        deque.addFirst(3);
 
+        assertEquals(3, deque.size());
+        assertEquals(3, (int)deque.removeFirst());
+        assertEquals(2, (int)deque.removeFirst());
+        assertEquals(1, (int)deque.removeFirst());
+    }
     @Test
     /** Adds an item, then removes an item, and ensures that dll is empty afterwards. */
     public void addRemoveTest() {
@@ -70,7 +84,63 @@ public class LinkedListDequeTest {
 
         assertEquals(errorMsg, 0, size);
     }
+    @Test
+    public void testIsEmpty() {
+        LinkedListDeque<Integer> deque = new LinkedListDeque<>();
+        assertTrue(deque.isEmpty());
 
+        deque.addLast(1);
+        assertFalse(deque.isEmpty());
+
+        deque.removeLast();
+        assertTrue(deque.isEmpty());
+    }
+    @Test
+    public void testSize() {
+        LinkedListDeque<Integer> deque = new LinkedListDeque<>();
+        assertEquals(0, deque.size());
+
+        deque.addLast(1);
+        assertEquals(1, deque.size());
+
+        deque.addLast(2);
+        deque.addLast(3);
+        assertEquals(3, deque.size());
+
+        deque.removeLast();
+        deque.removeLast();
+        assertEquals(1, deque.size());
+
+        deque.removeLast();
+        assertEquals(0, deque.size());
+    }
+    @Test
+    public void testPrintDeque() {
+        LinkedListDeque<Integer> deque = new LinkedListDeque<>();
+        deque.addLast(1);
+        deque.addLast(2);
+        deque.addLast(3);
+
+        StringBuilder expectedOutput = new StringBuilder();
+        expectedOutput.append("(1,2,3)");
+        assertEquals(expectedOutput.toString(), deque.toString());
+    }
+    @Test
+    public void testIterator() {
+        LinkedListDeque<Integer> deque = new LinkedListDeque<>();
+        deque.addLast(1);
+        deque.addLast(2);
+        deque.addLast(3);
+
+        Iterator<Integer> iterator = deque.iterator();
+        assertTrue(iterator.hasNext());
+        assertEquals(1, (int)iterator.next());
+        assertTrue(iterator.hasNext());
+        assertEquals(2, (int)iterator.next());
+        assertTrue(iterator.hasNext());
+        assertEquals(3, (int)iterator.next());
+        assertFalse(iterator.hasNext());
+    }
     @Test
     /* Check if you can create LinkedListDeques with different parameterized types*/
     public void multipleParamTest() {

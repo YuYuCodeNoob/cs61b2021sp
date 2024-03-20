@@ -87,4 +87,46 @@ public class ArrayDequeTest {
         testDeque.removeFirst();
         assertEquals(true, testDeque.isEmpty());
     }
+    @Test
+    public void testResize() {
+        ArrayDeque<Integer> deque = new ArrayDeque<>();
+        for (int i = 0; i < 16; i++) {
+            deque.addFirst(i);
+        }
+        assertEquals(false,deque.isEmpty());
+        assertEquals(16, deque.size());
+        assertEquals(15, deque.removeFirst().intValue());
+        // 验证扩容后元素顺序不变
+        for (int i = 14; i >= 0; i--) {
+            assertEquals(i, deque.removeFirst().intValue());
+        }
+        assertEquals(true,deque.isEmpty());
+    }
+
+    @Test
+    public void testRemoveLast() {
+        ArrayDeque<Integer> deque = new ArrayDeque<>();
+        deque.addLast(1);
+        deque.addLast(2);
+        assertEquals(2, deque.removeLast().intValue());
+        assertEquals(1, deque.removeLast().intValue());
+        assertEquals(true,deque.isEmpty());
+    }
+
+    @Test
+    public void testGetAndIterator() {
+        ArrayDeque<Integer> deque = new ArrayDeque<>();
+        deque.addLast(1);
+        deque.addLast(2);
+        deque.addLast(3);
+        assertEquals(1, deque.get(0).intValue());
+        assertEquals(2, deque.get(1).intValue());
+        assertEquals(3, deque.get(2).intValue());
+
+        int index = 0;
+        for (Integer item : deque) {
+            assertEquals(index + 1, item.intValue());
+            index++;
+        }
+    }
 }
