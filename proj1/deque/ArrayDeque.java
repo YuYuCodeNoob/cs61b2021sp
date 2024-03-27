@@ -20,24 +20,28 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
         items[head] = item;
         head = (head - 1) & (items.length - 1);
         size +=1;
-        if (size == items.length - 2){
+        if (size == items.length){
             resize(items.length * 2);
         }
     }
 
     private void resize(int capacity){
         T[] array = (T[]) new Object[capacity];
-        System.arraycopy(items,0,array,0,rear);
-        System.arraycopy(items,head,array,array.length - 1 + rear - size,size - rear + 1);
-        head = array.length - 1 + rear - size;
+        int p = (head + 1) & (items.length - 1);
+        int n = items.length;
+        int CountOfRight = n - p;
+        System.arraycopy(items, p, array, 0, CountOfRight);
+        System.arraycopy(items, 0, array, CountOfRight, p);
         items = array;
+        head = items.length - 1;
+        rear = n;
     }
     @Override
     public void addLast(T item) {
         items[rear] = item;
         rear = (rear + 1) & (items.length -1 );
         size +=1;
-        if (size == items.length - 2 ){
+        if (size == items.length ){
             resize(items.length * 2);
         }
     }
@@ -107,7 +111,7 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
         if (index < 0 || index >= size){
             return null;
         }
-        return items[(head + index + 1) % items.length];
+        return items[(head + index + 1) % (items.length)];
     }
 
     @Override
