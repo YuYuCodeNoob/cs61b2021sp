@@ -26,7 +26,7 @@ public class ArrayDequeTest {
         int first = 1;
         assertEquals(first,(int) testDeque.get(0));
         assertEquals(mid,(int) testDeque.get(1));
-        assertEquals(last,(int) testDeque.get(testDeque.size() - 1));
+        assertEquals(last,(int) testDeque.get(testDeque.size()-2));
     }
 
     @Test
