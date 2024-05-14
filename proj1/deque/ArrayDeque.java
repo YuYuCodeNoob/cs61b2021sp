@@ -3,11 +3,11 @@ package deque;
 import org.junit.Test;
 
 import java.util.Iterator;
-
 public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
     private int size;
     private int head;
     private int rear;
+    private int InitialCapacity = 8;
     private T[] items;
     public ArrayDeque(){
         items = (T[]) new Object[8];
@@ -35,6 +35,22 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
         items = array;
         head = items.length - 1;
         rear = n;
+    }
+    private void shrink(){
+        if (this.size() > items.length / 4 && !(items.length > InitialCapacity)){
+            return;
+        }
+        T[] array = (T[]) new Object[items.length / 2];
+        int p = (head + 1) & (items.length - 1);
+        if (p <= rear){
+            System.arraycopy(items, p, array, 0, this.size());
+        }else {
+            System.arraycopy(items, p, array, 0, items.length - p);
+            System.arraycopy(items, 0, array, items.length - p, rear);
+        }
+        items = array;
+        head = items.length - 1;
+        rear = size;
     }
     @Override
     public void addLast(T item) {
@@ -88,6 +104,7 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
             head = h;
         }
         size -= 1;
+        shrink();
         return item;
     }
 
@@ -103,6 +120,7 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
             rear = t;
         }
         size -= 1;
+        shrink();
         return item;
     }
 
