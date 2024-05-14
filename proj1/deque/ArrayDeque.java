@@ -37,7 +37,7 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
         rear = n;
     }
     private void shrink(){
-        if (this.size() > items.length / 4 && items.length > InitialCapacity){
+        if (this.size() > items.length / 4 | items.length == InitialCapacity){
             return;
         }
         T[] array = (T[]) new Object[items.length / 2];
