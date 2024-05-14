@@ -37,7 +37,7 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
         rear = n;
     }
     private void shrink(){
-        if (this.size() > items.length / 4 && !(items.length > InitialCapacity)){
+        if (this.size() > items.length / 4 && items.length > InitialCapacity){
             return;
         }
         T[] array = (T[]) new Object[items.length / 2];
@@ -48,6 +48,7 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
             System.arraycopy(items, p, array, 0, items.length - p);
             System.arraycopy(items, 0, array, items.length - p, rear);
         }
+        items = array;
         items = array;
         head = items.length - 1;
         rear = size;
@@ -104,7 +105,7 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
             head = h;
         }
         size -= 1;
-        shrink();
+        this.shrink();
         return item;
     }
 
@@ -120,7 +121,7 @@ public class ArrayDeque<T> implements Deque<T>,Iterable<T>{
             rear = t;
         }
         size -= 1;
-        shrink();
+        this.shrink();
         return item;
     }
 
