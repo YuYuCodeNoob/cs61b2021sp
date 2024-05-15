@@ -49,6 +49,28 @@ public class LinkedListDequeTest {
         assertEquals(1, (int)deque.removeFirst());
     }
     @Test
+    public void TestGet(){
+        Deque<Integer> testDeque = new LinkedListDeque<>();
+        testDeque.addLast(0);
+        testDeque.addFirst(2);
+        testDeque.addFirst(1);
+        testDeque.addLast(0);
+        testDeque.addFirst(2);
+        testDeque.addFirst(1);
+        testDeque.addLast(0);
+        testDeque.addFirst(2);
+        testDeque.addFirst(1);
+        testDeque.addLast(0);
+        testDeque.addFirst(2);
+        testDeque.addFirst(1);
+        int mid = 2;
+        int last = 0;
+        int first = 1;
+        assertEquals(first,(int) testDeque.get(0));
+        assertEquals(mid,(int) testDeque.get(1));
+        assertEquals(last,(int) testDeque.get(testDeque.size()-2));
+    }
+    @Test
     /** Adds an item, then removes an item, and ensures that dll is empty afterwards. */
     public void addRemoveTest() {
         LinkedListDeque<Integer> lld1 = new LinkedListDeque<Integer>();
@@ -250,4 +272,33 @@ public class LinkedListDequeTest {
             System.out.printf("%12d %12.2f %12d %12.2f\n", N, time, opCount, timePerOp);
         }
     }
+    @Test
+    public void testGetAndIterator() {
+        LinkedListDeque<Integer> deque = new LinkedListDeque<>();
+        deque.addLast(1);
+        deque.addLast(2);
+        deque.addLast(3);
+        assertEquals(1, deque.get(0).intValue());
+        assertEquals(2, deque.get(1).intValue());
+        assertEquals(3, deque.get(2).intValue());
+
+        int index = 0;
+        for (Integer item : deque) {
+            assertEquals(index + 1, item.intValue());
+            index++;
+        }
+
+    }
+    @Test
+    public void emptyIteratorTest(){
+        LinkedListDeque<Integer> deque = new LinkedListDeque<>();
+        int index = 0;
+        for (Integer item: deque
+             ) {
+            System.out.println(item);
+            index++;
+        }
+        assertEquals(0,index);
+    }
+
 }

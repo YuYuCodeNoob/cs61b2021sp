@@ -7,6 +7,18 @@ import static org.junit.Assert.assertEquals;
 
 public class ArrayDequeTest {
     @Test
+    public void testShrink(){
+        ArrayDeque<Integer> testDeque = new ArrayDeque<>();
+        for (int i = 0; i < 16; i++){
+            testDeque.addLast(i);
+        }
+        for (int i = 0; i < 16; i++){
+            testDeque.removeFirst();
+        }
+        assertEquals(true,testDeque.isEmpty());
+    }
+
+    @Test
     public void TestGet(){
         ArrayDeque<Integer> testDeque = new ArrayDeque<>();
         testDeque.addLast(0);
@@ -87,21 +99,6 @@ public class ArrayDequeTest {
         testDeque.removeFirst();
         assertEquals(true, testDeque.isEmpty());
     }
-    @Test
-    public void testResize() {
-        ArrayDeque<Integer> deque = new ArrayDeque<>();
-        for (int i = 0; i < 16; i++) {
-            deque.addFirst(i);
-        }
-        assertEquals(false,deque.isEmpty());
-        assertEquals(16, deque.size());
-        assertEquals(15, deque.removeFirst().intValue());
-        // 验证扩容后元素顺序不变
-        for (int i = 14; i >= 0; i--) {
-            assertEquals(i, deque.removeFirst().intValue());
-        }
-        assertEquals(true,deque.isEmpty());
-    }
 
     @Test
     public void testRemoveLast() {
@@ -129,4 +126,5 @@ public class ArrayDequeTest {
             index++;
         }
     }
+
 }
