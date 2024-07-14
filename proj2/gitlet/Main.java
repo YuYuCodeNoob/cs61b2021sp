@@ -10,10 +10,14 @@ public class Main {
      */
     public static void main(String[] args) {
         // TODO: what if args is empty?
+        if (args.length == 0){
+            System.out.println("Please Enter a Command");
+        }
         String firstArg = args[0];
         switch(firstArg) {
             case "init":
                 // TODO: handle the `init` command
+                Repository.init();
                 break;
             case "add":
                 // TODO: handle the `add [filename]` command

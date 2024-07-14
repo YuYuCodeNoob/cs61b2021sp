@@ -1,6 +1,8 @@
 package gitlet;
 
 import java.io.File;
+import java.io.Serializable;
+
 import static gitlet.Utils.*;
 
 // TODO: any imports you need here
@@ -11,7 +13,7 @@ import static gitlet.Utils.*;
  *
  *  @author TODO
  */
-public class Repository {
+public class Repository implements Serializable {
     /**
      * TODO: add instance variables here.
      *
@@ -24,6 +26,24 @@ public class Repository {
     public static final File CWD = new File(System.getProperty("user.dir"));
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
+    private static String currentBranch;
+    private static final String DEFAULT_BRANCH = "master";
+    public static final File OBJECT_DIR = join(GITLET_DIR, "objects");
+    public static void init(){
+        if (GITLET_DIR.exists()) {
+            System.out.println("A Gitlet version-control system already exists in the current directory");
+            System.exit(0);
+        }else {
+            GITLET_DIR.mkdir();
+            OBJECT_DIR.mkdir();
+            initCommit();
+            currentBranch = DEFAULT_BRANCH;
+        }
+    }
+    private static void initCommit(){
+        Commit commit = new Commit();
+        commit.save();
+    }
 
     /* TODO: fill in the rest of this class. */
 }
