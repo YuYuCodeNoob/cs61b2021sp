@@ -1,9 +1,14 @@
 package gitlet;
 
 import java.io.Serializable;
+/**
+    @author yyx
+    快照类，当file第一次加入暂存区的时候会生成一个Blob实例，如果file已经存在于暂存区中，则比较file是否改变，
+    若未改变则不加入到暂存区中，若文件改变则更新暂存区中文件，在commit后，所有暂存区的文件清空，commitID指向对应的版本Blob
+*/
 
 public class Blob implements Serializable {
     private String content;
     private String id;
-
+    private String fileName;
 }

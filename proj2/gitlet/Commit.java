@@ -1,7 +1,6 @@
 package gitlet;
 
 // TODO: any imports you need here
-
 import java.io.File;
 import java.io.Serializable;
 import java.text.DateFormat;
@@ -22,20 +21,37 @@ public class Commit implements Serializable {
      * comment above them describing what that variable represents and how that
      * variable is used. We've provided one example for `message`.
      */
+/**
+ *  用来记录当前commit的所有父提交，可以用于分支合并
+ *  例子为如果开发者在当前main分支下创建了feature-A分支，并且进行了两次提交
+ *  feature-A :
+ *      HEAD->commit_D->commit_C
+ *  main:
+ *      commit_B->commit_A
+ *   现在如果要对main和feature-A进行分支合并
+ *   则会创建一个新的commit_E
+ *      它要使用main 和 feature-A的最新commit进行分支合并以及解决冲突
+ *      这就是为何使用List<String>的数据结构
+ *      因为可能需要多个分支进行合并
+ *      String存储的是CommitID
+ */
+
     private final List<String> Parents;
     /** The message of this Commit. */
+//    message用于存放提交时的所添加的信息
     private String message;
+//    Tracked是一个字典 key是fileName values 是Blob-Id即fileName的版本号
     private final Map<String,String> Tracked;
-    private Date curtIme;
+    private Date curtime;
     private final String ID;
     private File commitFile;
     public Commit(){
         this.message = "initial commit";
         this.Parents = new ArrayList<>();
         this.Tracked = new HashMap<>();
-        this.curtIme = new Date(0);
+        this.curtime = new Date(0);
         this.ID = generateID();
-        this.commitFile = generateFIleName();
+        this.commitFile = generateFileName();
     }
 //    将当前的Date curTime时间对象转化为String格式 便于产生UID;
     public String Date2String(Date date){
@@ -43,11 +59,11 @@ public class Commit implements Serializable {
         return df.format(date);
     }
     private String generateID(){
-        return Utils.sha1(Date2String(curtIme),message,Parents.toString(),Tracked.toString());
+        return Utils.sha1(Date2String(curtime),message,Parents.toString(),Tracked.toString());
     }
     /* TODO: fill in the rest of this class.
     *   */
-    private File generateFIleName(){
+    private File generateFileName(){
         return Utils.join(Repository.OBJECT_DIR,ID);
     }
 
