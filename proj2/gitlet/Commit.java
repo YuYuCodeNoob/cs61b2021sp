@@ -58,6 +58,11 @@ public class Commit implements Serializable {
         DateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy", Locale.US);
         return df.format(date);
     }
+
+    public String getID() {
+        return ID;
+    }
+
     private String generateID(){
         return Utils.sha1(Date2String(curtime),message,Parents.toString(),Tracked.toString());
     }
@@ -74,5 +79,11 @@ public class Commit implements Serializable {
     public void test(){
         Commit commit = Utils.readObject(commitFile, Commit.class);
         System.out.println(commit.ID+""+commit.message+commit.Parents+commit.Tracked);
+    }
+    public String getMessage(){
+        return message + "  " + getID() + " " + curtime;
+    }
+    public String getCurtime(){
+        return Date2String(curtime);
     }
 }

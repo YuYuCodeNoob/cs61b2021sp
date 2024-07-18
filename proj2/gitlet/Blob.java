@@ -1,5 +1,6 @@
 package gitlet;
 
+import java.io.File;
 import java.io.Serializable;
 /**
     @author yyx
@@ -8,7 +9,23 @@ import java.io.Serializable;
 */
 
 public class Blob implements Serializable {
-    private String content;
     private String id;
     private String fileName;
+    private byte[] bytes;
+    public Blob(String fileName) {
+        this.fileName = fileName;
+        this.bytes = Utils.readContents(new File(fileName));
+        this.id = Utils.sha1(this.fileName, this.bytes);
+    }
+    public String getId(){
+        return this.id;
+    }
+    private File generateStoredPlace(){
+        return Utils.join(Repository.OBJECT_DIR, this.id);
+    }
+    private void save(){
+        Utils.writeObject(generateStoredPlace(), this);
+    }
+    public static void store(Blob blob){
+    }
 }

@@ -2,6 +2,7 @@ package gitlet;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.List;
 
 import static gitlet.Utils.*;
 
@@ -26,7 +27,6 @@ public class Repository implements Serializable {
     public static final File CWD = new File(System.getProperty("user.dir"));
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
-    private static String currentBranch;
     private static final String DEFAULT_BRANCH = "master";
 //    structure
 /*
@@ -37,8 +37,8 @@ public class Repository implements Serializable {
 *       --HEAD(存储当前头的信息)
 *       --refs（存储所有分支末端的信息）
 *           --heads
-*               ---master
-*               ---another branch etc.
+*               ---master:存储master分支下最新的commit id
+*               ---another branch etc 存储其他分支下最新的commitID.
 *       --stage(暂存区)
 *       用于存放已经add但是没有commit指向的blob实例，只有执行commit后才有commit的字典指向这个blob
 *       commit的字典字典k-values k : filename values:blobID
@@ -52,7 +52,13 @@ public class Repository implements Serializable {
 //    refs 保存本地分支
     public static final File REFS_DIR = join(GITLET_DIR,"refs");
 //    HEAD 保存头指针索引
-    public static final File HEAD_DIR = join(GITLET_DIR,"HEAD");
+    public static final File HEAD_FILE = join(GITLET_DIR,"HEAD");
+//    用于保存所有分支的最新commit信息
+    public static final File HEADS_DIR = join(REFS_DIR,"heads");
+//    添加暂存区
+    public static final File ADD_STAGE_DIR = join(GITLET_DIR,"add_stage");
+//    删除暂存区
+    public static final File RM_STAGE_DIR = join(GITLET_DIR,"rm_stage");
     private static Commit InitialCommit;
     public static void init(){
         if (GITLET_DIR.exists()) {
@@ -62,15 +68,23 @@ public class Repository implements Serializable {
             GITLET_DIR.mkdir();
             OBJECT_DIR.mkdir();
             REFS_DIR.mkdir();
-            HEAD_DIR.mkdir();
+            HEADS_DIR.mkdir();
             initCommit();
-            currentBranch = DEFAULT_BRANCH;
+            initHEAD();
+            initheads();
         }
     }
     private static void initCommit(){
         Commit commit = new Commit();
         InitialCommit = commit;
         commit.save();
+    }
+    private static void initHEAD(){
+        Utils.writeObject(HEAD_FILE,DEFAULT_BRANCH);
+    }
+    private static void initheads(){
+        File heads_file = Utils.join(HEADS_DIR,DEFAULT_BRANCH);
+        Utils.writeObject(heads_file,InitialCommit.getID());
     }
 //   由于所有的仓库和所有分支都指向initial commit 所以需要return 一个出去
     public Commit getInitialCommit(){
@@ -86,17 +100,75 @@ public class Repository implements Serializable {
                 System.out.println("File does not exist");
                 System.exit(1);
             }else{
-                Blob blob = new Blob();
+                Blob blob = new Blob(fileName);
             }
         }
     }
-    public static void switchBranch(String branchName){
-        if (branchName.equals(currentBranch)){
-            System.out.println("No need to checkout the current branch.");
-            System.exit(0);
-        }else {
-            currentBranch = branchName;
+    public static void global_log(){
+        List<String> commitList = Utils.plainFilenamesIn(OBJECT_DIR);
+        StringBuffer buffer = new StringBuffer();
+        for (String commit: commitList) {
+            Commit commitContent = Utils.readObject(Utils.join(OBJECT_DIR,commit),Commit.class);
+            buffer.append(commitContent.getMessage()+ "\n");
         }
+        System.out.println(buffer.toString());
+    }
+//
+    public static void find(String commitMessage){
+        List<String> commitList = Utils.plainFilenamesIn(OBJECT_DIR);
+        for (String commit: commitList) {
+            Commit commitContent = Utils.readObject(Utils.join(OBJECT_DIR,commit),Commit.class);
+            if (commitContent.getMessage().equals(commitMessage)){
+                System.out.println(commit);
+            }
+        }
+    }
+    public static void status(){
+        System.out.println("=== Branches ===");
+        String HEADBranchName = readObject(HEAD_FILE, String.class);
+        List<String> branchList = Utils.plainFilenamesIn(HEADS_DIR);
+        System.out.println("*" + HEADBranchName);
+        for (String branch:branchList) {
+            if (!branch.equals(HEADBranchName))
+                System.out.println(branch);
+        }
+        System.out.println("=== Staged Files ===");
+    }
+    public static void branch(String branchName){
+        if (branchName.equals("")){
+            System.out.println("please enter a new branch name");
+            System.exit(1);
+        }
+        List<String> branchList = Utils.plainFilenamesIn(HEADS_DIR);
+        for (String branch:branchList) {
+            if (branch.equals(branchName)){
+                System.out.println("A branch with that name already exists.");
+                System.exit(1);
+            }
+        }
+        File branch = Utils.join(HEADS_DIR,branchName);
+        String currentBranch = Utils.readObject(HEAD_FILE,String.class);
+        String currentBranchLastCommitID = Utils.readObject(Utils.join(HEADS_DIR,currentBranch),String.class);
+        Utils.writeObject(branch,currentBranchLastCommitID);
+    }
+    public static void switchBranch(String branchName){
+        String currentBranch = Utils.readContentsAsString(HEAD_FILE);
+        if (currentBranch.equals(branchName)){
+            System.out.println("you're already in" + branchName);
+            System.exit(1);
+        }
+        List<String> branchList = Utils.plainFilenamesIn(HEADS_DIR);
+        for (String branch: branchList) {
+            if (branch.equals(branchName)){
+                Utils.writeObject(HEAD_FILE,branchName);
+                /*
+                Todo ：清空当前暂存区
+                *
+                **/
+                System.exit(1);
+            }
+        }
+        System.out.println("this branch doesn't exist");
     }
     /* TODO: fill in the rest of this class. */
 }

@@ -37,14 +37,20 @@ public class Main {
             case "log":
                 break;
             case "global-log":
+                Repository.global_log();
                 break;
             case "status":
+                Repository.status();
                 break;
             case "find":
                 break;
             case "checkout":
+                validateArgs(args,2);
+                Repository.switchBranch(args[1]);
                 break;
             case "branch":
+                validateArgs(args,2);
+                Repository.branch(args[1]);
                 break;
             case "rm-branch":
                 break;
