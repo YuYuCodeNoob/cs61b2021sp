@@ -1,7 +1,11 @@
 package gitlet;
 
+import org.apache.commons.collections.map.HashedMap;
+
 import java.io.File;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,8 +93,45 @@ public class Repository implements Serializable {
     }
 
     public static void commit(String commitMessage) {
+        String currentBranch = CurrentBranch();
+        String currentBranchLastCommitID = Utils.readObject(Utils.join(HEADS_DIR,currentBranch),String.class);
+        Commit lastCommit = Utils.readObject(Utils.join(OBJECT_DIR,currentBranchLastCommitID),Commit.class);
+        Map<String,String> fileMap = new HashMap<>(lastCommit.getTracked());
+        List<String> fileList = getStageFiles();
+        for (String file: fileList) {
+            if (!fileMap.containsKey(file)){
+//                            查看filemap 里存不存在这个文件
+                /*
+                * todo blob id not dedfined
+                * */
+                String BlobId = "todo";
+                fileMap.put(file,BlobId);
+
+            }
+            else {
+                String BlobIdfromStage = "todo";
+                fileMap.replace(file,BlobIdfromStage);
+            }
+        }
+        /*
+        * todo 清理暂存区
+        * */
+        List<String> parents = new ArrayList<>();
+        parents.add(currentBranchLastCommitID);
+        Commit commit = new Commit(fileMap,parents,commitMessage);
+        Utils.writeObject(HEAD_FILE,commit.getID());
+        commit.save();
     }
 
+    public static List<String> getStageFiles(){
+        /*
+        * todo 从暂存区中获取文件
+        * */
+        return null;
+    }
+    private static String CurrentBranch(){
+        return readObject(HEAD_FILE,String.class);
+    }
     //   由于所有的仓库和所有分支都指向initial commit 所以需要return 一个出去
     public Commit getInitialCommit(){
         return InitialCommit;
@@ -158,11 +199,12 @@ public class Repository implements Serializable {
     }
 //    切换到特定的分支
     public static void switchBranch(String branchName){
-        String currentBranch = Utils.readContentsAsString(HEAD_FILE);
+        String currentBranch = CurrentBranch();
         if (currentBranch.equals(branchName)){
-            System.out.println("you're already in" + branchName);
+            System.out.println("you're already in " + branchName);
             System.exit(1);
         }
+        else {
         String BranchLastCommitId = readContentsAsString(Utils.join(HEAD_FILE,branchName));
         Utils.writeObject(HEAD_FILE,BranchLastCommitId);
                 /*
@@ -170,6 +212,7 @@ public class Repository implements Serializable {
                 *
                 **/
         System.exit(1);
+        }
     }
     public static void checkout(String info){
 //        先检查info 是不是branchName
@@ -180,8 +223,7 @@ public class Repository implements Serializable {
                 switchBranch(info);
             }
         }
-        String lastCommitBranch = Utils.readObject(HEAD_FILE,String.class);
-        System.out.println(lastCommitBranch);
+        String lastCommitBranch = CurrentBranch();
         String lastCommitID = Utils.readObject(Utils.join(HEADS_DIR,lastCommitBranch),String.class);
         Commit lastCommit = Utils.readObject(Utils.join(OBJECT_DIR,lastCommitID),Commit.class);
         Map<String,String> allFileTrack = lastCommit.getTracked();

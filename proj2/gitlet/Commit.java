@@ -53,7 +53,17 @@ public class Commit implements Serializable {
         this.ID = generateID();
         this.commitFile = generateFileName();
     }
-//    将当前的Date curTime时间对象转化为String格式 便于产生UID;
+
+    public Commit(Map<String, String> fileMap, List<String> parents,String commitMessage) {
+        this.Tracked = fileMap;
+        this.Parents = parents;
+        this.message = commitMessage;
+        this.curtime = new Date();
+        this.ID = generateID();
+        this.commitFile = generateFileName();
+    }
+
+    //    将当前的Date curTime时间对象转化为String格式 便于产生UID;
     public String Date2String(Date date){
         DateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy", Locale.US);
         return df.format(date);
@@ -81,7 +91,7 @@ public class Commit implements Serializable {
         System.out.println(commit.ID+""+commit.message+commit.Parents+commit.Tracked);
     }
     public String getMessage(){
-        return message + "  " + getID() + " " + curtime;
+        return message;
     }
     public String getCurtime(){
         return Date2String(curtime);
