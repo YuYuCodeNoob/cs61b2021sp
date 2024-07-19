@@ -28,4 +28,7 @@ public class Blob implements Serializable {
     }
     public static void store(Blob blob){
     }
+    public byte[] getBytes(){
+        return bytes;
+    }
 }

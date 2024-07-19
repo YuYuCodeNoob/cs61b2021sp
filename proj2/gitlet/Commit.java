@@ -86,4 +86,7 @@ public class Commit implements Serializable {
     public String getCurtime(){
         return Date2String(curtime);
     }
+    public Map<String,String> getTracked(){
+        return Tracked;
+    }
 }

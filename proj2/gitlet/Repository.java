@@ -3,6 +3,7 @@ package gitlet;
 import java.io.File;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 import static gitlet.Utils.*;
 
@@ -86,7 +87,11 @@ public class Repository implements Serializable {
         File heads_file = Utils.join(HEADS_DIR,DEFAULT_BRANCH);
         Utils.writeObject(heads_file,InitialCommit.getID());
     }
-//   由于所有的仓库和所有分支都指向initial commit 所以需要return 一个出去
+
+    public static void commit(String commitMessage) {
+    }
+
+    //   由于所有的仓库和所有分支都指向initial commit 所以需要return 一个出去
     public Commit getInitialCommit(){
         return InitialCommit;
     }
@@ -151,24 +156,42 @@ public class Repository implements Serializable {
         String currentBranchLastCommitID = Utils.readObject(Utils.join(HEADS_DIR,currentBranch),String.class);
         Utils.writeObject(branch,currentBranchLastCommitID);
     }
+//    切换到特定的分支
     public static void switchBranch(String branchName){
         String currentBranch = Utils.readContentsAsString(HEAD_FILE);
         if (currentBranch.equals(branchName)){
             System.out.println("you're already in" + branchName);
             System.exit(1);
         }
-        List<String> branchList = Utils.plainFilenamesIn(HEADS_DIR);
-        for (String branch: branchList) {
-            if (branch.equals(branchName)){
-                Utils.writeObject(HEAD_FILE,branchName);
+        String BranchLastCommitId = readContentsAsString(Utils.join(HEAD_FILE,branchName));
+        Utils.writeObject(HEAD_FILE,BranchLastCommitId);
                 /*
                 Todo ：清空当前暂存区
                 *
                 **/
-                System.exit(1);
+        System.exit(1);
+    }
+    public static void checkout(String info){
+//        先检查info 是不是branchName
+//        如果是branchName 则切换到特定的分支上
+        List<String> branchList = Utils.plainFilenamesIn(HEADS_DIR);
+        for (String branch: branchList) {
+            if (branch.equals(info)){
+                switchBranch(info);
             }
         }
-        System.out.println("this branch doesn't exist");
+        String lastCommitBranch = Utils.readObject(HEAD_FILE,String.class);
+        System.out.println(lastCommitBranch);
+        String lastCommitID = Utils.readObject(Utils.join(HEADS_DIR,lastCommitBranch),String.class);
+        Commit lastCommit = Utils.readObject(Utils.join(OBJECT_DIR,lastCommitID),Commit.class);
+        Map<String,String> allFileTrack = lastCommit.getTracked();
+        for (String key: allFileTrack.keySet()) {
+            if (key.equals(info)){
+                Blob targetSnap = Utils.readObject(Utils.join(OBJECT_DIR,allFileTrack.get(info)),Blob.class);
+                File checkoutFile = new File(info);
+                Utils.writeObject(checkoutFile,targetSnap.getBytes());
+            }
+        }
     }
     /* TODO: fill in the rest of this class. */
 }

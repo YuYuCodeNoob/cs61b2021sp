@@ -28,6 +28,8 @@ public class Main {
                 break;
             // TODO: FILL THE REST IN
             case "commit":
+                validateArgs(args,2);
+                Repository.commit(args[1]);
                 break;
             case "rm":
                 validateArgs(args,2);
@@ -46,7 +48,7 @@ public class Main {
                 break;
             case "checkout":
                 validateArgs(args,2);
-                Repository.switchBranch(args[1]);
+                Repository.checkout(args[1]);
                 break;
             case "branch":
                 validateArgs(args,2);
