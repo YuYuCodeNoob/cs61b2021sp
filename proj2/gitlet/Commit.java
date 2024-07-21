@@ -6,14 +6,13 @@ import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
 /** Represents a gitlet commit object.
  *  TODO: It's a good idea to give a description here of what else this Class
  *  does at a high level.
  *
  *  @author TODO
  */
-public class Commit implements Serializable {
+public class Commit implements Serializable,Dumpable{
     /**
      * TODO: add instance variables here.
      *
@@ -45,21 +44,24 @@ public class Commit implements Serializable {
     private Date curtime;
     private final String ID;
     private File commitFile;
+    private String commitBranch;
     public Commit(){
         this.message = "initial commit";
         this.Parents = new ArrayList<>();
         this.Tracked = new HashMap<>();
         this.curtime = new Date(0);
+        this.commitBranch ="master";
         this.ID = generateID();
         this.commitFile = generateFileName();
     }
 
-    public Commit(Map<String, String> fileMap, List<String> parents,String commitMessage) {
+    public Commit(Map<String, String> fileMap, List<String> parents,String commitMessage,String commitBranch) {
         this.Tracked = fileMap;
         this.Parents = parents;
         this.message = commitMessage;
         this.curtime = new Date();
         this.ID = generateID();
+        this.commitBranch = commitBranch;
         this.commitFile = generateFileName();
     }
 
@@ -98,5 +100,11 @@ public class Commit implements Serializable {
     }
     public Map<String,String> getTracked(){
         return Tracked;
+    }
+    public String getCommitBranch(){
+        return commitBranch;
+    }
+    @Override
+    public void dump() {
     }
 }

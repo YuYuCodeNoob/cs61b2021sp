@@ -1,7 +1,4 @@
 package gitlet;
-
-import org.apache.commons.collections.map.HashedMap;
-
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -33,6 +30,7 @@ public class Repository implements Serializable {
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
     private static final String DEFAULT_BRANCH = "master";
+    public static final File STAGE_FILE = join(GITLET_DIR,"STAGE");
 //    structure
 /*
 *  -.gitlet
@@ -47,6 +45,16 @@ public class Repository implements Serializable {
 *       --stage(暂存区)
 *       用于存放已经add但是没有commit指向的blob实例，只有执行commit后才有commit的字典指向这个blob
 *       commit的字典字典k-values k : filename values:blobID
+*       stage 暂存区中存放的相当于key-value;
+*       key-是文件名
+*       value 是文件的blobId
+*       add 操作发生时，检查commit的hashmap里是否有追踪这个文件，如果没有追踪，则加入到status中 如果已经有了，则查看commit-id是否有差异，
+*       有差异则加入到暂存区，
+*       没差异则忽略。
+*
+*
+*
+*
 *
 * */
     /*
@@ -74,6 +82,8 @@ public class Repository implements Serializable {
             OBJECT_DIR.mkdir();
             REFS_DIR.mkdir();
             HEADS_DIR.mkdir();
+            Stage stage = new Stage();
+            stage.save();
             initCommit();
             initHEAD();
             initheads();
@@ -91,35 +101,38 @@ public class Repository implements Serializable {
         File heads_file = Utils.join(HEADS_DIR,DEFAULT_BRANCH);
         Utils.writeObject(heads_file,InitialCommit.getID());
     }
-
+    private static Stage CurrentStage(){
+        return Utils.readObject(STAGE_FILE,Stage.class);
+    }
     public static void commit(String commitMessage) {
         String currentBranch = CurrentBranch();
         String currentBranchLastCommitID = Utils.readObject(Utils.join(HEADS_DIR,currentBranch),String.class);
         Commit lastCommit = Utils.readObject(Utils.join(OBJECT_DIR,currentBranchLastCommitID),Commit.class);
         Map<String,String> fileMap = new HashMap<>(lastCommit.getTracked());
         List<String> fileList = getStageFiles();
+        Stage stage = CurrentStage();
+        Map<String,String> stageMap = stage.getStage();
         for (String file: fileList) {
             if (!fileMap.containsKey(file)){
 //                            查看filemap 里存不存在这个文件
-                /*
-                * todo blob id not dedfined
-                * */
-                String BlobId = "todo";
+                String BlobId = stageMap.get(file);
                 fileMap.put(file,BlobId);
 
             }
             else {
-                String BlobIdfromStage = "todo";
+                String BlobIdfromStage = stageMap.get(file);
                 fileMap.replace(file,BlobIdfromStage);
             }
         }
         /*
-        * todo 清理暂存区
+        * 清理暂存区
         * */
+        stage.clear();
         List<String> parents = new ArrayList<>();
         parents.add(currentBranchLastCommitID);
-        Commit commit = new Commit(fileMap,parents,commitMessage);
-        Utils.writeObject(HEAD_FILE,commit.getID());
+        Commit commit = new Commit(fileMap,parents,commitMessage,CurrentBranch());
+        Utils.writeObject(HEAD_FILE,currentBranch);
+        Utils.writeObject(Utils.join(HEADS_DIR,CurrentBranch()),commit.getID());
         commit.save();
     }
 
@@ -127,26 +140,69 @@ public class Repository implements Serializable {
         /*
         * todo 从暂存区中获取文件
         * */
-        return null;
+        Stage stage = CurrentStage();
+        List<String> fileList = new ArrayList<>(stage.getStage().keySet());
+        return fileList;
     }
     private static String CurrentBranch(){
         return readObject(HEAD_FILE,String.class);
     }
-    //   由于所有的仓库和所有分支都指向initial commit 所以需要return 一个出去
-    public Commit getInitialCommit(){
-        return InitialCommit;
+
+    public static void removeBranch(String branchName) {
+        String currentBranch = CurrentBranch();
+        if (branchName.equals(currentBranch)){
+            System.out.println("Cannot remove the current branch");
+        }
+        else {
+        File branch = Utils.join(HEADS_DIR,branchName);
+        if (branch.exists()){
+            branch.delete();
+        }else {
+            System.out.println("A branch with that name does not exist");
+        }
+        }
     }
+    private static List<String> getAllBranch(){
+        return Utils.plainFilenamesIn(HEADS_DIR);
+    }
+    private static Commit preCommit(){
+        String lastCommitID = CurrentBranchLastCommitID();
+        return Utils.readObject(join(OBJECT_DIR,lastCommitID),Commit.class);
+    }
+    private static String CurrentBranchLastCommitID(){
+        String currentBranch = CurrentBranch();
+        String currentBranchLastCommitID = Utils.readObject(Utils.join(HEADS_DIR,currentBranch),String.class);
+        return currentBranchLastCommitID;
+    }
+
     public static void add(String fileName){
         if (fileName.equals("")){
             System.out.println("File does not exist");
             System.exit(1);
         }else{
-            File file = new File(fileName);
+            File file = Utils.join(CWD,fileName);
             if (!file.exists()){
                 System.out.println("File does not exist");
                 System.exit(1);
             }else{
                 Blob blob = new Blob(fileName);
+                File blobfile = Utils.join(OBJECT_DIR,blob.getId());
+                String blobID = blob.getId();
+                if (!blobfile.exists()){
+                    blob.save();
+                }
+                Stage stage = CurrentStage();
+                Map<String, String> stageMap = stage.getStage();
+                Commit preCommit = preCommit();
+                Map<String, String> tracked = preCommit.getTracked();
+                if (!tracked.containsKey(fileName)){
+                    stage.add(fileName,blobID);
+                }else {
+                    if (!tracked.get(fileName).equals(blobID)){
+                        stage.add(fileName,blobID);
+                    }
+                }
+
             }
         }
     }
@@ -154,10 +210,23 @@ public class Repository implements Serializable {
         List<String> commitList = Utils.plainFilenamesIn(OBJECT_DIR);
         StringBuffer buffer = new StringBuffer();
         for (String commit: commitList) {
-            Commit commitContent = Utils.readObject(Utils.join(OBJECT_DIR,commit),Commit.class);
-            buffer.append(commitContent.getMessage()+ "\n");
+            Dumpable commitContent = Utils.readObject(Utils.join(OBJECT_DIR,commit),Dumpable.class);
+            if (commitContent instanceof Commit){
+                buffer.append(((Commit) commitContent).getMessage() + "\n");
+            }
         }
         System.out.println(buffer.toString());
+    }
+    public static List<Commit> getAllCommit(){
+        List<String> commitCandidate = Utils.plainFilenamesIn(OBJECT_DIR);
+        List<Commit> commitList = new ArrayList<>();
+        for (String commit: commitCandidate) {
+            Dumpable commitContent = Utils.readObject(Utils.join(OBJECT_DIR,commit),Dumpable.class);
+            if (commitContent instanceof Commit){
+                commitList.add((Commit) commitContent);
+            }
+        }
+        return commitList;
     }
 //
     public static void find(String commitMessage){
@@ -171,14 +240,18 @@ public class Repository implements Serializable {
     }
     public static void status(){
         System.out.println("=== Branches ===");
-        String HEADBranchName = readObject(HEAD_FILE, String.class);
-        List<String> branchList = Utils.plainFilenamesIn(HEADS_DIR);
+        String HEADBranchName = CurrentBranch();
         System.out.println("*" + HEADBranchName);
+        List<String> branchList = getAllBranch();
         for (String branch:branchList) {
             if (!branch.equals(HEADBranchName))
                 System.out.println(branch);
         }
         System.out.println("=== Staged Files ===");
+        List<String> stageFiles = getStageFiles();
+        for (String file: stageFiles) {
+            System.out.println(file);
+        }
     }
     public static void branch(String branchName){
         if (branchName.equals("")){
@@ -193,7 +266,7 @@ public class Repository implements Serializable {
             }
         }
         File branch = Utils.join(HEADS_DIR,branchName);
-        String currentBranch = Utils.readObject(HEAD_FILE,String.class);
+        String currentBranch = CurrentBranch();
         String currentBranchLastCommitID = Utils.readObject(Utils.join(HEADS_DIR,currentBranch),String.class);
         Utils.writeObject(branch,currentBranchLastCommitID);
     }
@@ -205,12 +278,12 @@ public class Repository implements Serializable {
             System.exit(1);
         }
         else {
-        String BranchLastCommitId = readContentsAsString(Utils.join(HEAD_FILE,branchName));
-        Utils.writeObject(HEAD_FILE,BranchLastCommitId);
-                /*
-                Todo ：清空当前暂存区
-                *
-                **/
+        Utils.writeObject(HEAD_FILE,branchName);
+        /*
+        清空当前暂存区
+        **/
+        Stage stage = Utils.readObject(STAGE_FILE,Stage.class);
+        stage.clear();
         System.exit(1);
         }
     }
@@ -223,6 +296,7 @@ public class Repository implements Serializable {
                 switchBranch(info);
             }
         }
+//        checkout file
         String lastCommitBranch = CurrentBranch();
         String lastCommitID = Utils.readObject(Utils.join(HEADS_DIR,lastCommitBranch),String.class);
         Commit lastCommit = Utils.readObject(Utils.join(OBJECT_DIR,lastCommitID),Commit.class);
@@ -232,6 +306,7 @@ public class Repository implements Serializable {
                 Blob targetSnap = Utils.readObject(Utils.join(OBJECT_DIR,allFileTrack.get(info)),Blob.class);
                 File checkoutFile = new File(info);
                 Utils.writeObject(checkoutFile,targetSnap.getBytes());
+                System.exit(0);
             }
         }
     }

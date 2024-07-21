@@ -57,6 +57,8 @@ public class Main {
                 Repository.branch(args[1]);
                 break;
             case "rm-branch":
+                validateArgs(args,2);
+                Repository.removeBranch(args[1]);
                 break;
             case "reset":
                 break;

@@ -8,14 +8,16 @@ import java.io.Serializable;
     若未改变则不加入到暂存区中，若文件改变则更新暂存区中文件，在commit后，所有暂存区的文件清空，commitID指向对应的版本Blob
 */
 
-public class Blob implements Serializable {
+public class Blob implements Serializable,Dumpable{
     private String id;
     private String fileName;
     private byte[] bytes;
+    private File storePlace;
     public Blob(String fileName) {
         this.fileName = fileName;
         this.bytes = Utils.readContents(new File(fileName));
         this.id = Utils.sha1(this.fileName, this.bytes);
+        this.storePlace = generateStoredPlace();
     }
     public String getId(){
         return this.id;
@@ -23,12 +25,17 @@ public class Blob implements Serializable {
     private File generateStoredPlace(){
         return Utils.join(Repository.OBJECT_DIR, this.id);
     }
-    private void save(){
+    public void save(){
         Utils.writeObject(generateStoredPlace(), this);
     }
     public static void store(Blob blob){
     }
     public byte[] getBytes(){
         return bytes;
+    }
+
+    @Override
+    public void dump() {
+
     }
 }
