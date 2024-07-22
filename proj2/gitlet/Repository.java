@@ -192,7 +192,6 @@ public class Repository implements Serializable {
                     blob.save();
                 }
                 Stage stage = CurrentStage();
-                Map<String, String> stageMap = stage.getStage();
                 Commit preCommit = preCommit();
                 Map<String, String> tracked = preCommit.getTracked();
                 if (!tracked.containsKey(fileName)){
@@ -305,7 +304,7 @@ public class Repository implements Serializable {
             if (key.equals(info)){
                 Blob targetSnap = Utils.readObject(Utils.join(OBJECT_DIR,allFileTrack.get(info)),Blob.class);
                 File checkoutFile = new File(info);
-                Utils.writeObject(checkoutFile,targetSnap.getBytes());
+                Utils.writeContents(checkoutFile,targetSnap.getBytes());
                 System.exit(0);
             }
         }
