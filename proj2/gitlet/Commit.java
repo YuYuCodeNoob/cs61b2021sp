@@ -65,9 +65,13 @@ public class Commit implements Serializable,Dumpable{
         this.commitFile = generateFileName();
     }
 
+    public List<String> getParents() {
+        return Parents;
+    }
+
     //    将当前的Date curTime时间对象转化为String格式 便于产生UID;
     public String Date2String(Date date){
-        DateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy", Locale.US);
+        DateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy Z", Locale.US);
         return df.format(date);
     }
 

@@ -325,6 +325,7 @@ public class Repository implements Serializable {
         for (String branch: branchList) {
             if (branch.equals(info)){
                 switchBranch(info);
+                return;
             }
         }
 //        checkout file
@@ -369,6 +370,42 @@ public class Repository implements Serializable {
         }else {
             System.out.println("No commit with that id exists.");
         }
+    }
+    public static void checkout(String commitID,String fileName){
+        List<Commit> commitList = getAllCommit();
+        for (Commit commit:commitList) {
+            if (commit.getID().equals(commitID)){
+                Map<String, String> tracked = commit.getTracked();
+                if (tracked.containsKey(fileName)){
+                    File file = new File(fileName);
+                    String blobID = tracked.get(fileName);
+                    Blob blob = Utils.readObject(Utils.join(OBJECT_DIR,blobID),Blob.class);
+                    Utils.writeContents(file,blob.getBytes());
+                }else {
+                    System.out.println("File does not exist in that commit");
+                }
+                return;
+            }
+        }
+        System.out.println("No commit with that id exists");
+    }
+
+    public static void log() {
+        Commit commit = preCommit();
+        while (commit.getParents().size() != 0){
+            System.out.println("===");
+            System.out.println("commit " + commit.getID());
+            System.out.println("Date: "+commit.getCurtime());
+            System.out.println(commit.getMessage());
+            String parentId = commit.getParents().get(0);
+            System.out.println();
+            commit = Utils.readObject(Utils.join(OBJECT_DIR,parentId),Commit.class);
+        }
+        System.out.println("===");
+        System.out.println("commit " + commit.getID());
+        System.out.println("Date: "+commit.getCurtime());
+        System.out.println(commit.getMessage());
+        System.out.println();
     }
     /* TODO: fill in the rest of this class. */
 }

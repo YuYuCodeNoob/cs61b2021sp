@@ -36,6 +36,7 @@ public class Main {
             case "merge":
                 break;
             case "log":
+                Repository.log();
                 break;
             case "global-log":
                 Repository.global_log();
@@ -48,8 +49,19 @@ public class Main {
                 Repository.find(args[1]);
                 break;
             case "checkout":
-                validateArgs(args,2);
+                if(args.length == 2){
                 Repository.checkout(args[1]);
+
+                }
+                else if (args.length == 3){
+                    String fileName = args[2];
+                    Repository.checkout(fileName);
+                }
+                else if (args.length == 4){
+                    String commitID = args[1];
+                    String fileName = args[3];
+                    Repository.checkout(commitID,fileName);
+                }
                 break;
             case "branch":
                 validateArgs(args,2);
