@@ -242,6 +242,13 @@ public class Repository implements Serializable {
         String HEADBranchName = CurrentBranch();
         System.out.println("*" + HEADBranchName);
         List<String> branchList = getAllBranch();
+        Commit lastCommit = preCommit();
+        Stage stage = CurrentStage();
+        Map<String, String> stageMap = stage.getStage();
+        Map<String, String> tracked = lastCommit.getTracked();
+        List<String> untrackedFileList = new ArrayList<>();
+        List<String> modifiedList = new ArrayList<>();
+        List<String> fileList = Utils.plainFilenamesIn(CWD);
         for (String branch:branchList) {
             if (!branch.equals(HEADBranchName))
                 System.out.println(branch);
@@ -251,6 +258,33 @@ public class Repository implements Serializable {
         for (String file: stageFiles) {
             System.out.println(file);
         }
+        for (String file:fileList) {
+            if (baseJudge(file)){
+                if ((!tracked.containsKey(file)) && (!stageMap.containsKey(file))){
+                    untrackedFileList.add(file);
+                }
+                if (tracked.containsKey(file)){
+                    Blob blob = new Blob(file);
+                    if (!blob.getId().equals(tracked.get(file)) &&(!stageMap.containsKey(file))){
+                        modifiedList.add(file);
+                    }
+                }
+            }
+        }
+        System.out.println("=== Removes Files ===");
+//        TODO:remove file
+        System.out.println("=== Modifications Not Staged For Commit ===");
+        for (String file:modifiedList) {
+            System.out.println(file + " (modified)");
+        }
+        System.out.println("=== Untracked Files ===");
+//        print the untrackedList
+        for (String file:untrackedFileList) {
+            System.out.println(file);
+        }
+    }
+    private static boolean baseJudge(String file){
+        return ((!file.equals("Makefile")) && (!file.equals("pom.xml")) && (!file.equals("gitlet-design.md")));
     }
     public static void branch(String branchName){
         if (branchName.equals("")){
@@ -296,9 +330,7 @@ public class Repository implements Serializable {
             }
         }
 //        checkout file
-        String lastCommitBranch = CurrentBranch();
-        String lastCommitID = Utils.readObject(Utils.join(HEADS_DIR,lastCommitBranch),String.class);
-        Commit lastCommit = Utils.readObject(Utils.join(OBJECT_DIR,lastCommitID),Commit.class);
+        Commit lastCommit = preCommit();
         Map<String,String> allFileTrack = lastCommit.getTracked();
         for (String key: allFileTrack.keySet()) {
             if (key.equals(info)){
@@ -309,5 +341,6 @@ public class Repository implements Serializable {
             }
         }
     }
+
     /* TODO: fill in the rest of this class. */
 }
