@@ -1,5 +1,4 @@
 package gitlet;
-
 /** Driver class for Gitlet, a subset of the Git version-control system.
  *  @author TODO
  */
@@ -61,6 +60,9 @@ public class Main {
                 Repository.removeBranch(args[1]);
                 break;
             case "reset":
+                validateArgs(args,2);
+                String commitID = args[1];
+                Repository.reset(commitID);
                 break;
         }
     }

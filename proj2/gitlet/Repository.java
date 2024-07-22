@@ -51,11 +51,6 @@ public class Repository implements Serializable {
 *       add 操作发生时，检查commit的hashmap里是否有追踪这个文件，如果没有追踪，则加入到status中 如果已经有了，则查看commit-id是否有差异，
 *       有差异则加入到暂存区，
 *       没差异则忽略。
-*
-*
-*
-*
-*
 * */
     /*
     * HEAD_DIR中只保留最新的HEAD指针，HEAD内容默认为最新的commitID，在进行版本转换时，只需要把HEAD指向之前的commit即可
@@ -229,11 +224,10 @@ public class Repository implements Serializable {
     }
 //
     public static void find(String commitMessage){
-        List<String> commitList = Utils.plainFilenamesIn(OBJECT_DIR);
-        for (String commit: commitList) {
-            Commit commitContent = Utils.readObject(Utils.join(OBJECT_DIR,commit),Commit.class);
-            if (commitContent.getMessage().equals(commitMessage)){
-                System.out.println(commit);
+        List<Commit> commitList= getAllCommit();
+        for (Commit commit:commitList) {
+            if (commit.getMessage().equals(commitMessage)){
+                System.out.println(commit.getID());
             }
         }
     }
@@ -284,7 +278,7 @@ public class Repository implements Serializable {
         }
     }
     private static boolean baseJudge(String file){
-        return ((!file.equals("Makefile")) && (!file.equals("pom.xml")) && (!file.equals("gitlet-design.md")));
+        return ((!file.equals("Makefile")) && (!file.equals("pom.xml")) && (!file.equals("gitlet-design.md")) && (!file.equals("clean.sh")));
     }
     public static void branch(String branchName){
         if (branchName.equals("")){
@@ -315,10 +309,14 @@ public class Repository implements Serializable {
         /*
         清空当前暂存区
         **/
-        Stage stage = Utils.readObject(STAGE_FILE,Stage.class);
-        stage.clear();
+        clearStage();
         System.exit(1);
         }
+    }
+//    清空暂存区
+    private static void clearStage(){
+        Stage stage = Utils.readObject(STAGE_FILE,Stage.class);
+        stage.clear();
     }
     public static void checkout(String info){
 //        先检查info 是不是branchName
@@ -342,5 +340,35 @@ public class Repository implements Serializable {
         }
     }
 
+    public static void reset(String commitID) {
+        List<Commit> commitList = getAllCommit();
+        Commit resetCommit = null;
+        for (Commit commit:commitList) {
+            if (commit.getID().equals(commitID)){
+                resetCommit = commit;
+                }
+            }
+        if (resetCommit != null){
+            String CurrentBranch = resetCommit.getCommitBranch();
+            writeObject(HEAD_FILE,CurrentBranch);
+            writeObject(Utils.join(HEADS_DIR,CurrentBranch),resetCommit.getID());
+            Map<String, String> tracked = resetCommit.getTracked();
+            for (String key: tracked.keySet()) {
+                String value = tracked.get(key);
+                Blob blob = readObject(Utils.join(OBJECT_DIR, value), Blob.class);
+                Utils.writeContents(new File(key), blob.getBytes());
+            }
+            List<String> fileList = plainFilenamesIn(CWD);
+            for (String file: fileList) {
+                if ((!tracked.containsKey(file)) && (baseJudge(file))){
+                    File deleteFile = new File(file);
+                    deleteFile.delete();
+                }
+            }
+            clearStage();
+        }else {
+            System.out.println("No commit with that id exists.");
+        }
+    }
     /* TODO: fill in the rest of this class. */
 }
