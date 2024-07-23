@@ -67,6 +67,7 @@ public class Repository implements Serializable {
     public static final File ADD_STAGE_DIR = join(GITLET_DIR,"add_stage");
 //    删除暂存区
     public static final File RM_STAGE_DIR = join(GITLET_DIR,"rm_stage");
+    public static boolean exist = false;
     private static Commit InitialCommit;
     public static void init(){
         if (GITLET_DIR.exists()) {
@@ -82,6 +83,7 @@ public class Repository implements Serializable {
             initCommit();
             initHEAD();
             initheads();
+            exist = true;
         }
     }
     private static void initCommit(){
@@ -407,5 +409,10 @@ public class Repository implements Serializable {
         System.out.println(commit.getMessage());
         System.out.println();
     }
+
+/**
+ *
+ * TODO: merge two branch
+ */
     /* TODO: fill in the rest of this class. */
 }
