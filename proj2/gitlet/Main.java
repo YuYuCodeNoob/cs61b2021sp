@@ -34,6 +34,9 @@ public class Main {
                 validateArgs(args,2);
                 break;
             case "merge":
+                /*
+                * TODO:merge two branch
+                * */
                 break;
             case "log":
                 Repository.log();
@@ -51,13 +54,20 @@ public class Main {
             case "checkout":
                 if(args.length == 2){
                 Repository.checkout(args[1]);
-
                 }
                 else if (args.length == 3){
+                    if (!args[1].equals("--")){
+                        System.out.println("Incorrect operands");
+                        System.exit(0);
+                    }
                     String fileName = args[2];
                     Repository.checkout(fileName);
                 }
                 else if (args.length == 4){
+                    if (!args[2].equals("--")){
+                        System.out.println("Incorrect operands");
+                        System.exit(0);
+                    }
                     String commitID = args[1];
                     String fileName = args[3];
                     Repository.checkout(commitID,fileName);
@@ -76,6 +86,8 @@ public class Main {
                 String commitID = args[1];
                 Repository.reset(commitID);
                 break;
+            default:
+                System.out.println("Incorrect operands");
         }
     }
     public static void validateArgs(String [] args, int n){

@@ -1,5 +1,6 @@
 package gitlet;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +23,9 @@ public class Stage implements Serializable {
 
     public void add(String fileName, String blobID) {
         if (stage.containsKey(fileName)){
+            String preID = stage.get(fileName);
             stage.replace(fileName,blobID);
+            Utils.join(Repository.OBJECT_DIR,preID).delete();
         }else {
             stage.put(fileName,blobID);
         }
