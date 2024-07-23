@@ -102,6 +102,10 @@ public class Repository implements Serializable {
         return Utils.readObject(STAGE_FILE,Stage.class);
     }
     public static void commit(String commitMessage) {
+        if (commitMessage.equals("")){
+            System.out.println("Please enter a commit message");
+            return;
+        }
         String currentBranch = CurrentBranch();
         String currentBranchLastCommitID = Utils.readObject(Utils.join(HEADS_DIR,currentBranch),String.class);
         Commit lastCommit = Utils.readObject(Utils.join(OBJECT_DIR,currentBranchLastCommitID),Commit.class);
@@ -109,6 +113,10 @@ public class Repository implements Serializable {
         List<String> fileList = getStageFiles();
         Stage stage = CurrentStage();
         Map<String,String> stageMap = stage.getStage();
+        if(stageMap.isEmpty()){
+            System.out.println("No changes added to the commit.");
+            return;
+        }
         for (String file: fileList) {
             if (!fileMap.containsKey(file)){
 //                            查看filemap 里存不存在这个文件
@@ -174,12 +182,12 @@ public class Repository implements Serializable {
 
     public static void add(String fileName){
         if (fileName.equals("")){
-            System.out.println("File does not exist");
+            System.out.println("File does not exist.");
             System.exit(1);
         }else{
             File file = Utils.join(CWD,fileName);
             if (!file.exists()){
-                System.out.println("File does not exist");
+                System.out.println("File does not exist.");
                 System.exit(1);
             }else{
                 Blob blob = new Blob(fileName);
@@ -249,11 +257,13 @@ public class Repository implements Serializable {
             if (!branch.equals(HEADBranchName))
                 System.out.println(branch);
         }
+        System.out.println();
         System.out.println("=== Staged Files ===");
         List<String> stageFiles = getStageFiles();
         for (String file: stageFiles) {
             System.out.println(file);
         }
+        System.out.println();
         for (String file:fileList) {
             if (baseJudge(file)){
                 if ((!tracked.containsKey(file)) && (!stageMap.containsKey(file))){
@@ -269,15 +279,18 @@ public class Repository implements Serializable {
         }
         System.out.println("=== Removes Files ===");
 //        TODO:remove file
+        System.out.println();
         System.out.println("=== Modifications Not Staged For Commit ===");
         for (String file:modifiedList) {
             System.out.println(file + " (modified)");
         }
+        System.out.println();
         System.out.println("=== Untracked Files ===");
 //        print the untrackedList
         for (String file:untrackedFileList) {
             System.out.println(file);
         }
+        System.out.println();
     }
     private static boolean baseJudge(String file){
         return ((!file.equals("Makefile")) && (!file.equals("pom.xml")) && (!file.equals("gitlet-design.md")) && (!file.equals("clean.sh")));
@@ -312,6 +325,9 @@ public class Repository implements Serializable {
         清空当前暂存区
         **/
         clearStage();
+/**
+ * TODO:将工作区文件替换掉
+ */
         System.exit(1);
         }
     }
