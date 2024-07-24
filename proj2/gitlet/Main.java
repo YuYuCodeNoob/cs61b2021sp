@@ -22,16 +22,19 @@ public class Main {
                 break;
             case "add":
                 // TODO: handle the `add [filename]` command
+                Repository.validateInit();
                 validateArgs(args, 2);
                 Repository.add(args[1]);
                 break;
             // TODO: FILL THE REST IN
             case "commit":
+                Repository.validateInit();
                 validateArgs(args,2);
                 Repository.commit(args[1]);
                 break;
             case "rm":
                 validateArgs(args,2);
+                Repository.rm(args[1]);
                 break;
             case "merge":
                 /*
@@ -39,19 +42,24 @@ public class Main {
                 * */
                 break;
             case "log":
+                Repository.validateInit();
                 Repository.log();
                 break;
             case "global-log":
+                Repository.validateInit();
                 Repository.global_log();
                 break;
             case "status":
+                Repository.validateInit();
                 Repository.status();
                 break;
             case "find":
+                Repository.validateInit();
                 validateArgs(args,2);
                 Repository.find(args[1]);
                 break;
             case "checkout":
+                Repository.validateInit();
                 if(args.length == 2){
                 Repository.checkoutBranch(args[1]);
                 }
@@ -74,14 +82,17 @@ public class Main {
                 }
                 break;
             case "branch":
+                Repository.validateInit();
                 validateArgs(args,2);
                 Repository.branch(args[1]);
                 break;
             case "rm-branch":
+                Repository.validateInit();
                 validateArgs(args,2);
                 Repository.removeBranch(args[1]);
                 break;
             case "reset":
+                Repository.validateInit();
                 validateArgs(args,2);
                 String commitID = args[1];
                 Repository.reset(commitID);

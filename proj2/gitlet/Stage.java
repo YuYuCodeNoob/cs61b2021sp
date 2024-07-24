@@ -7,11 +7,13 @@ import java.util.Map;
 
 public class Stage implements Serializable {
     private Map<String,String> stage;
-    public Stage(){
+    private File saveFile;
+    public Stage(File saveFile){
         this.stage = new HashMap<>();
+        this.saveFile = saveFile;
     }
     public void save(){
-        Utils.writeObject(Repository.STAGE_FILE,this);
+        Utils.writeObject(saveFile,this);
     }
     public void clear(){
         this.stage = new HashMap<>();
