@@ -156,14 +156,14 @@ public class Repository implements Serializable {
     public static void removeBranch(String branchName) {
         String currentBranch = CurrentBranch();
         if (branchName.equals(currentBranch)){
-            System.out.println("Cannot remove the current branch");
+            System.out.println("Cannot remove the current branch.");
         }
         else {
         File branch = Utils.join(HEADS_DIR,branchName);
         if (branch.exists()){
             branch.delete();
         }else {
-            System.out.println("A branch with that name does not exist");
+            System.out.println("A branch with that name does not exist.");
         }
         }
     }
@@ -212,14 +212,12 @@ public class Repository implements Serializable {
     }
     public static void global_log(){
         List<String> commitList = Utils.plainFilenamesIn(OBJECT_DIR);
-        StringBuffer buffer = new StringBuffer();
         for (String commit: commitList) {
             Dumpable commitContent = Utils.readObject(Utils.join(OBJECT_DIR,commit),Dumpable.class);
             if (commitContent instanceof Commit){
-                buffer.append(((Commit) commitContent).getMessage() + "\n");
+                logWithCommit((Commit) commitContent);
             }
         }
-        System.out.println(buffer.toString());
     }
     public static List<Commit> getAllCommit(){
         List<String> commitCandidate = Utils.plainFilenamesIn(OBJECT_DIR);
@@ -314,21 +312,28 @@ public class Repository implements Serializable {
     }
 //    切换到特定的分支
     public static void switchBranch(String branchName){
-        String currentBranch = CurrentBranch();
-        if (currentBranch.equals(branchName)){
-            System.out.println("you're already in " + branchName);
-            System.exit(1);
-        }
-        else {
         Utils.writeObject(HEAD_FILE,branchName);
         /*
         清空当前暂存区
         **/
         clearStage();
 /**
- * TODO:将工作区文件替换掉
+ * 将工作区文件替换掉
  */
-        System.exit(1);
+        String branchLastCommitID = Utils.readObject(Utils.join(HEADS_DIR,branchName),String.class);
+        Commit commit = getCommitByID(branchLastCommitID);
+        Map<String, String> tracked = commit.getTracked();
+        List<String> fileList = plainFilenamesIn(CWD);
+        for (String fileName: fileList) {
+            if (baseJudge(fileName)){
+                File file = new File(fileName);
+                file.delete();
+            }
+        }
+        for (String key:tracked.keySet()){
+            File file = new File(key);
+            Blob blob = Utils.readObject(Utils.join(OBJECT_DIR,tracked.get(key)),Blob.class);
+            writeContents(file,blob.getBytes());
         }
     }
 //    清空暂存区
@@ -336,17 +341,7 @@ public class Repository implements Serializable {
         Stage stage = Utils.readObject(STAGE_FILE,Stage.class);
         stage.clear();
     }
-    public static void checkout(String info){
-//        先检查info 是不是branchName
-//        如果是branchName 则切换到特定的分支上
-        List<String> branchList = Utils.plainFilenamesIn(HEADS_DIR);
-        for (String branch: branchList) {
-            if (branch.equals(info)){
-                switchBranch(info);
-                return;
-            }
-        }
-//        checkout file
+    public static void checkoutFile(String info){
         Commit lastCommit = preCommit();
         Map<String,String> allFileTrack = lastCommit.getTracked();
         for (String key: allFileTrack.keySet()) {
@@ -358,15 +353,24 @@ public class Repository implements Serializable {
             }
         }
     }
+    public static void checkoutBranch(String branchName){
+        String currentBranch = CurrentBranch();
+        if (currentBranch.equals(branchName)){
+            System.out.println("No need to checkout the current branch.");
+            return;
+        }
+        List<String> branchList = Utils.plainFilenamesIn(HEADS_DIR);
+        for (String branch: branchList) {
+            if (branch.equals(branchName)){
+                switchBranch(branchName);
+                return;
+            }
+        }
+        System.out.println("No such branch exists.");
+    }
 
     public static void reset(String commitID) {
-        List<Commit> commitList = getAllCommit();
-        Commit resetCommit = null;
-        for (Commit commit:commitList) {
-            if (commit.getID().equals(commitID)){
-                resetCommit = commit;
-                }
-            }
+        Commit resetCommit = getCommitByID(commitID);
         if (resetCommit != null){
             String CurrentBranch = resetCommit.getCommitBranch();
             writeObject(HEAD_FILE,CurrentBranch);
@@ -380,8 +384,7 @@ public class Repository implements Serializable {
             List<String> fileList = plainFilenamesIn(CWD);
             for (String file: fileList) {
                 if ((!tracked.containsKey(file)) && (baseJudge(file))){
-                    File deleteFile = new File(file);
-                    deleteFile.delete();
+                    System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
                 }
             }
             clearStage();
@@ -390,33 +393,26 @@ public class Repository implements Serializable {
         }
     }
     public static void checkout(String commitID,String fileName){
-        List<Commit> commitList = getAllCommit();
-        for (Commit commit:commitList) {
-            if (commit.getID().equals(commitID)){
-                Map<String, String> tracked = commit.getTracked();
-                if (tracked.containsKey(fileName)){
-                    File file = new File(fileName);
-                    String blobID = tracked.get(fileName);
-                    Blob blob = Utils.readObject(Utils.join(OBJECT_DIR,blobID),Blob.class);
-                    Utils.writeContents(file,blob.getBytes());
-                }else {
-                    System.out.println("File does not exist in that commit");
-                }
-                return;
+        if (getCommitByID(commitID) != null){
+            Commit commit = getCommitByID(commitID);
+            Map<String,String> tracked = commit.getTracked();
+            if (tracked.containsKey(fileName)){
+                File file = new File(fileName);
+                String blobID = tracked.get(fileName);
+                Blob blob = Utils.readObject(Utils.join(OBJECT_DIR,blobID),Blob.class);
+                Utils.writeContents(file,blob.getBytes());
             }
         }
-        System.out.println("No commit with that id exists");
+        else {
+            System.out.println("No commit with that id exists");
+        }
     }
 
     public static void log() {
         Commit commit = preCommit();
         while (commit.getParents().size() != 0){
-            System.out.println("===");
-            System.out.println("commit " + commit.getID());
-            System.out.println("Date: "+commit.getCurtime());
-            System.out.println(commit.getMessage());
+            logWithCommit(commit);
             String parentId = commit.getParents().get(0);
-            System.out.println();
             commit = Utils.readObject(Utils.join(OBJECT_DIR,parentId),Commit.class);
         }
         System.out.println("===");
@@ -425,7 +421,30 @@ public class Repository implements Serializable {
         System.out.println(commit.getMessage());
         System.out.println();
     }
+    private static void logWithCommit(Commit commit){
+        System.out.println("===");
+        System.out.println("commit " + commit.getID());
+        System.out.println("Date: "+commit.getCurtime());
+        System.out.println(commit.getMessage());
+        System.out.println();
+    }
+    private static Commit getCommitByID(String commitID){
+        if (commitID.length() == 40){
+            File commitFile = Utils.join(OBJECT_DIR,commitID);
+            if (!commitFile.exists()){
+                return null;
+            }
+            return Utils.readObject(commitFile,Commit.class);
+        }
+        List<String> commitList = plainFilenamesIn(OBJECT_DIR);
+        for (String commit:commitList) {
+            if (commit.startsWith(commitID)){
+                return Utils.readObject(Utils.join(OBJECT_DIR,commit),Commit.class);
+            }
+        }
+        return null;
 
+    }
 /**
  *
  * TODO: merge two branch

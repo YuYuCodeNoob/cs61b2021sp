@@ -53,7 +53,7 @@ public class Main {
                 break;
             case "checkout":
                 if(args.length == 2){
-                Repository.checkout(args[1]);
+                Repository.checkoutBranch(args[1]);
                 }
                 else if (args.length == 3){
                     if (!args[1].equals("--")){
@@ -61,7 +61,7 @@ public class Main {
                         System.exit(0);
                     }
                     String fileName = args[2];
-                    Repository.checkout(fileName);
+                    Repository.checkoutFile(fileName);
                 }
                 else if (args.length == 4){
                     if (!args[2].equals("--")){
@@ -87,12 +87,12 @@ public class Main {
                 Repository.reset(commitID);
                 break;
             default:
-                System.out.println("Incorrect operands");
+                System.out.println("No command with that name exists.");
         }
     }
     public static void validateArgs(String [] args, int n){
         if (args.length != n){
-            System.out.println("Incorrect operands");
+            System.out.println("Incorrect operands.");
             System.exit(0);
         }
     }
