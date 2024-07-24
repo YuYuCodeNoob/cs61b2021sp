@@ -345,7 +345,7 @@ public class Repository implements Serializable {
 //        }
         System.out.println();
 
-//        System.out.println("=== Untracked Files ===");
+        System.out.println("=== Untracked Files ===");
 //        for (String file : untrackedFileList) {
 //            System.out.println(file);
 //        }
