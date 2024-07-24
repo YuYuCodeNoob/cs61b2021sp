@@ -275,14 +275,14 @@ public class Repository implements Serializable {
             System.out.println("Found no commit with that message.");
         }
     }
-    public static void status(){
+    public static void status() {
         System.out.println("=== Branches ===");
         String HEADBranchName = CurrentBranch();
         System.out.println("*" + HEADBranchName);
         List<String> branchList = getAllBranch();
-        List<String> CWDFileList =  Utils.plainFilenamesIn(CWD);
+        List<String> CWDFileList = Utils.plainFilenamesIn(CWD);
         Set<String> currentSet = new HashSet<>(CWDFileList);
-        List<String > deleteList = new ArrayList<>();
+        List<String> deleteList = new ArrayList<>();
         Commit lastCommit = preCommit();
         Stage stage = CurrentStage();
         Map<String, String> stageMap = stage.getStage();
@@ -290,62 +290,68 @@ public class Repository implements Serializable {
         List<String> untrackedFileList = new ArrayList<>();
         List<String> modifiedList = new ArrayList<>();
         List<String> fileList = Utils.plainFilenamesIn(CWD);
-        for (String branch:branchList) {
-            if (!branch.equals(HEADBranchName))
+
+        for (String branch : branchList) {
+            if (!branch.equals(HEADBranchName)) {
                 System.out.println(branch);
+            }
         }
         System.out.println();
+
         System.out.println("=== Staged Files ===");
         List<String> stageFiles = getStageFiles();
-        for (String file: stageFiles) {
+        for (String file : stageFiles) {
             System.out.println(file);
         }
         System.out.println();
-        for (String file:fileList) {
-            if (baseJudge(file)){
-                if ((!tracked.containsKey(file)) && (!stageMap.containsKey(file))){
+
+        for (String file : fileList) {
+            if (baseJudge(file)) {
+                if (!tracked.containsKey(file) && !stageMap.containsKey(file)) {
                     untrackedFileList.add(file);
                 }
-                if (tracked.containsKey(file)){
+                if (tracked.containsKey(file)) {
                     Blob blob = new Blob(file);
-                    if (!blob.getId().equals(tracked.get(file)) &&(!stageMap.containsKey(file))){
+                    if (!blob.getId().equals(tracked.get(file)) && !stageMap.containsKey(file)) {
                         modifiedList.add(file);
                     }
                 }
             }
         }
-        System.out.println("=== Removes Files ===");
-//        remove file Stage
+
+        System.out.println("=== Removed Files ===");
         List<String> deleteStageFileList = getDeleteStageFileList();
-        for (String deleteFile : deleteStageFileList){
+        for (String deleteFile : deleteStageFileList) {
             System.out.println(deleteFile);
         }
         System.out.println();
+
         System.out.println("=== Modifications Not Staged For Commit ===");
-        for (String file : stageFiles){
-            if (!currentSet.contains(file)){
+        for (String file : stageFiles) {
+            if (!currentSet.contains(file)) {
                 deleteList.add(file);
             }
         }
-        for (String file : tracked.keySet()){
-            if (!currentSet.contains(file)){
+        for (String file : tracked.keySet()) {
+            if (!currentSet.contains(file)) {
                 deleteList.add(file);
             }
         }
-//        for (String deleteFile : deleteList){
-//            System.out.println(deleteFile+ " (deleted)");
+//        for (String deleteFile : deleteList) {
+//            System.out.println(deleteFile + " (deleted)");
 //        }
-//        for (String file:modifiedList) {
+//        for (String file : modifiedList) {
 //            System.out.println(file + " (modified)");
 //        }
         System.out.println();
-        System.out.println("=== Untracked Files ===");
-//        print the untrackedList
-//        for (String file:untrackedFileList) {
+
+//        System.out.println("=== Untracked Files ===");
+//        for (String file : untrackedFileList) {
 //            System.out.println(file);
 //        }
         System.out.println();
     }
+
     private static boolean baseJudge(String file){
         return ((!file.equals("Makefile")) && (!file.equals("pom.xml")) && (!file.equals("gitlet-design.md")) && (!file.equals("clean.sh")));
     }
