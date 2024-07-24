@@ -132,8 +132,7 @@ public class Repository implements Serializable {
             }
         }
 //        清理暂存区
-        stage.clear();
-        deleteStage.clear();
+        clearStage();
         List<String> parents = new ArrayList<>();
         parents.add(currentBranchLastCommitID);
         Commit commit = new Commit(fileMap,parents,commitMessage,CurrentBranch());
@@ -179,6 +178,9 @@ public class Repository implements Serializable {
     }
 
     public static void add(String fileName){
+/**
+ * TODO:当文件被改为原来的版本时，要将它从stage中删除
+ */
         if (fileName.equals("")){
             System.out.println("File does not exist.");
             return;
@@ -204,7 +206,12 @@ public class Repository implements Serializable {
                         stage.add(fileName,blobID);
                     }
                 }
-
+                Stage deleteStage = Utils.readObject(DELETE_STAGE_FILE,Stage.class);
+                Map<String, String> deleteStageMap = deleteStage.getStage();
+                if (deleteStageMap.containsKey(fileName) && deleteStageMap.get(fileName).equals(blobID)){
+                    deleteStageMap.remove(fileName);
+                    deleteStage.save();
+                }
             }
         }
     }
