@@ -4,12 +4,13 @@ import java.io.File;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class Stage implements Serializable {
     private Map<String,String> stage;
     private File saveFile;
     public Stage(File saveFile){
-        this.stage = new HashMap<>();
+        this.stage = new TreeMap<>();
         this.saveFile = saveFile;
     }
     public void save(){

@@ -48,7 +48,7 @@ public class Commit implements Serializable,Dumpable{
     public Commit(){
         this.message = "initial commit";
         this.Parents = new ArrayList<>();
-        this.Tracked = new HashMap<>();
+        this.Tracked = new TreeMap<>();
         this.curtime = new Date(0);
         this.commitBranch ="master";
         this.ID = generateID();
@@ -90,11 +90,6 @@ public class Commit implements Serializable,Dumpable{
 
     public void save() {
         Utils.writeObject(commitFile, this);
-    }
-//    测试能否正常读取数据
-    public void test(){
-        Commit commit = Utils.readObject(commitFile, Commit.class);
-        System.out.println(commit.ID+""+commit.message+commit.Parents+commit.Tracked);
     }
     public String getMessage(){
         return message;

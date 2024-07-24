@@ -508,6 +508,7 @@ public class Repository implements Serializable {
             if (!commitFile.exists()){
                 return null;
             }
+
             return Utils.readObject(commitFile,Commit.class);
         }
         List<String> commitList = plainFilenamesIn(OBJECT_DIR);
