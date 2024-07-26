@@ -378,11 +378,6 @@ public class Repository implements Serializable {
     }
 //    切换到特定的分支
     public static void switchBranch(String branchName){
-        Utils.writeObject(HEAD_FILE,branchName);
-        /*
-        清空当前暂存区
-        **/
-        clearStage();
 /**
  * 将工作区文件替换掉
  */
@@ -390,7 +385,19 @@ public class Repository implements Serializable {
         Commit commit = getCommitByID(branchLastCommitID);
         Map<String, String> tracked = commit.getTracked();
         List<String> fileList = plainFilenamesIn(CWD);
+        Set<String> untrackedSet = getUntrackedSet();
         for (String fileName: fileList) {
+            if (baseJudge(fileName)){
+                if (untrackedSet.contains(fileName) && tracked.containsKey(fileName)){
+                    Blob blob = new Blob(fileName);
+                    if (!blob.getId().equals(tracked.get(fileName))){
+                        System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+                        return;
+                    }
+                }
+            }
+        }
+        for (String fileName:fileList) {
             if (baseJudge(fileName)){
                 File file = new File(fileName);
                 file.delete();
@@ -401,6 +408,25 @@ public class Repository implements Serializable {
             Blob blob = Utils.readObject(Utils.join(OBJECT_DIR,tracked.get(key)),Blob.class);
             writeContents(file,blob.getBytes());
         }
+        Utils.writeObject(HEAD_FILE,branchName);
+        /*
+        清空当前暂存区
+        **/
+        clearStage();
+    }
+    private static Set<String> getUntrackedSet(){
+        Map<String, String> tracked = preCommit().getTracked();
+        List<String> fileList = plainFilenamesIn(CWD);
+        Map<String,String> stageMap = Utils.readObject(STAGE_FILE,Stage.class).getStage();
+        Set<String> untrackedFileSet = new HashSet<>();
+        for (String file : fileList){
+            if (baseJudge(file)){
+                if (!tracked.containsKey(file) && !stageMap.containsKey(file)) {
+                    untrackedFileSet.add(file);
+                }
+            }
+        }
+        return untrackedFileSet;
     }
 //    清空暂存区
     private static void clearStage(){
