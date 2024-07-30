@@ -40,6 +40,8 @@ public class Main {
                 /*
                 * TODO:merge two branch
                 * */
+                Repository.validateInit();
+                Repository.merge(args[1]);
                 break;
             case "log":
                 Repository.validateInit();

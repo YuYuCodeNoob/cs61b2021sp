@@ -564,4 +564,69 @@ public class Repository implements Serializable {
  * TODO: merge two branch
  */
     /* TODO: fill in the rest of this class. */
+    public static void merge(String branch){
+//        merge two branch,this two parents is the id
+        List<String> branchList = plainFilenamesIn(HEADS_DIR);
+        Set <String > branchSet = new HashSet<>(branchList);
+        if (branch.equals(CurrentBranch())){
+            System.out.println("Cannot merge a branch with itself.");
+            return;
+        }else if(!branchSet.contains(branch)){
+            System.out.println("A branch with that name does not exist.");
+            return;
+        }
+        String spiltPointID = findSpiltPoint(branch);
+        Commit spiltPointCommit = getCommitByID(spiltPointID);
+        Set<String> untrackedSet = getUntrackedSet();
+        List<String> parents = new ArrayList<>();
+        parents.add(preCommit().getID());
+        String branchLastCommitID = readObject(join(HEADS_DIR, branch), String.class);
+        parents.add(branchLastCommitID);
+    }
+    private static String findSpiltPoint(String otherBranch){
+        Queue<String> q = new LinkedList<>();
+//        key commitID value depth
+        Map<String,Integer> currentBranchMap =new HashMap<>();
+        HashMap<String,Integer> otherBranchMap = new HashMap<>();
+        String currentBranchID = preCommit().getID();
+        q.add(currentBranchID);
+        int depth1 = 0;
+        currentBranchMap.put(currentBranchID,depth1);
+        while (!q.isEmpty()){
+            String commitID = q.poll();
+            Commit commit = getCommitByID(commitID);
+            List<String> parents = commit.getParents();
+            depth1 +=1;
+            for (String parentID:parents) {
+                currentBranchMap.put(parentID,depth1);
+                q.add(parentID);
+            }
+        }
+        int depth2 = 0;
+        String otherBranchID = Utils.readObject(Utils.join(HEADS_DIR,otherBranch),String.class);
+        q.add(otherBranchID);
+        otherBranchMap.put(otherBranchID,depth2);
+        while (!q.isEmpty()){
+            String commitID = q.poll();
+            Commit commit = getCommitByID(commitID);
+            List<String> parents = commit.getParents();
+            depth2 +=1;
+            for (String parentID:parents) {
+                currentBranchMap.put(parentID,depth2);
+                q.add(parentID);
+            }
+        }
+        int minvalue = Integer.MAX_VALUE;
+        String minkey = null;
+        for (String key:currentBranchMap.keySet()) {
+            if (otherBranchMap.containsKey(key)){
+                if (minvalue > currentBranchMap.get(key)){
+                    minkey = key;
+                    minvalue = currentBranchMap.get(key);
+                }
+            }
+        }
+//        minkey is the commitID of the spilt point
+        return minkey;
+    }
 }
