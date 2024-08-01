@@ -37,9 +37,6 @@ public class Main {
                 Repository.rm(args[1]);
                 break;
             case "merge":
-                /*
-                * TODO:merge two branch
-                * */
                 Repository.validateInit();
                 Repository.merge(args[1]);
                 break;
