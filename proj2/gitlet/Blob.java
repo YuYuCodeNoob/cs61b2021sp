@@ -38,6 +38,9 @@ public class Blob implements Serializable,Dumpable{
     public void dump() {
 
     }
+    public byte[] getContents(){
+        return bytes;
+    }
 
     public String getFileName() {
         return fileName;

@@ -1,6 +1,7 @@
 package gitlet;
 import java.io.File;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static gitlet.Utils.*;
@@ -385,6 +386,7 @@ public class Repository implements Serializable {
         Set<String> untrackedSet = getUntrackedSet();
         for (String fileName: fileList) {
             if (baseJudge(fileName)){
+//                如果切换分支时候当前没有追踪的文件被切换的分支的文件所覆盖，则失败返回
                 if (untrackedSet.contains(fileName) && tracked.containsKey(fileName)){
                     Blob blob = new Blob(fileName);
                     if (!blob.getId().equals(tracked.get(fileName))){
@@ -518,11 +520,7 @@ public class Repository implements Serializable {
             String parentId = commit.getParents().get(0);
             commit = Utils.readObject(Utils.join(OBJECT_DIR,parentId),Commit.class);
         }
-        System.out.println("===");
-        System.out.println("commit " + commit.getID());
-        System.out.println("Date: "+commit.getCurtime());
-        System.out.println(commit.getMessage());
-        System.out.println();
+        logWithCommit(commit);
     }
     private static void logWithCommit(Commit commit){
         System.out.println("===");
@@ -561,184 +559,193 @@ public class Repository implements Serializable {
  * TODO: merge two branch
  */
     /* TODO: fill in the rest of this class. */
-    public static void merge(String branch){
-//        merge two branch,this two parents is the id
-        List<String> branchList = plainFilenamesIn(HEADS_DIR);
-        Set <String > branchSet = new HashSet<>(branchList);
-        if (branch.equals(CurrentBranch())){
-            System.out.println("Cannot merge a branch with itself.");
-            return;
-        }else if(!branchSet.contains(branch)){
-            System.out.println("A branch with that name does not exist.");
-            return;
+public static void merge(String branch) {
+    // 校验条件
+    List<String> branchList = plainFilenamesIn(HEADS_DIR);
+    Set<String> branchSet = new HashSet<>(branchList);
+    if (branch.equals(CurrentBranch())) {
+        System.out.println("Cannot merge a branch with itself.");
+        return;
+    } else if (!branchSet.contains(branch)) {
+        System.out.println("A branch with that name does not exist.");
+        return;
+    }
+
+    String splitPointID = findSplitPoint(branch);
+    Commit splitPointCommit = getCommitByID(splitPointID);
+    Commit branchLastCommit = getCommitByID(Utils.readObject(Utils.join(HEADS_DIR, branch), String.class));
+    if (splitPointCommit.getID().equals(branchLastCommit.getID())) {
+        System.out.println("Given branch is an ancestor of the current branch.");
+        return;
+    }
+
+    if (splitPointCommit.getID().equals(preCommit().getID())) {
+        Utils.writeObject(Utils.join(HEADS_DIR, Utils.readObject(HEAD_FILE, String.class)), branchLastCommit.getID());
+        reset(branchLastCommit.getID());
+        System.out.println("Current branch fast-forwarded.");
+        return;
+    }
+
+    boolean []conflict = {false};
+    Map<String, String> splitTracked = splitPointCommit.getTracked();
+    Map<String, String> currentTracked = preCommit().getTracked();
+    Map<String, String> branchTracked = branchLastCommit.getTracked();
+    Map<String, String> mergeTracked = new TreeMap<>();
+
+    // 处理文件
+    handleFileNotExistInBranch(splitTracked, currentTracked, branchTracked, mergeTracked);
+    handleFileModifiedInCurrentBranch(splitTracked, currentTracked, branchTracked, mergeTracked, conflict);
+    handleFileModifiedInBothBranches(splitTracked, currentTracked, branchTracked, mergeTracked, conflict);
+
+    // 处理在一个分支中存在，而在split和其他分支中都不存在的情况
+    for (String file : currentTracked.keySet()) {
+        if (!splitTracked.containsKey(file) && !branchTracked.containsKey(file)) {
+            mergeTracked.put(file, currentTracked.get(file));
         }
-        String spiltPointID = findSplitPoint(branch);
-        Commit spiltPointCommit = getCommitByID(spiltPointID);
-        Commit branchLastCommit = getCommitByID(Utils.readObject(Utils.join(HEADS_DIR,branch),String.class));
-//        处理spiltPoint 和branch相同的情况
-        if (spiltPointCommit.getID().equals(branchLastCommit.getID()
-        )){
-            System.out.println("Given branch is an ancestor of the current branch.");
-            return;
+    }
+    for (String file : branchTracked.keySet()) {
+        if (!splitTracked.containsKey(file) && !currentTracked.containsKey(file)) {
+            mergeTracked.put(file, branchTracked.get(file));
         }
-//        处理spiltpoint 和Current相同的情况
-        if(spiltPointCommit.getID().equals(preCommit().getID())){
-            Utils.writeObject(Utils.join(HEADS_DIR,Utils.readObject(HEAD_FILE,String.class)),branchLastCommit.getID());
-            System.out.println("Current branch fast-forwarded.");
-            return;
-        }
-        boolean conflict = false;
-        Map<String, String> SplitTracked = spiltPointCommit.getTracked();
-        Map<String, String> CurrentTracked = preCommit().getTracked();
-        Map<String, String> BranchTracked = branchLastCommit.getTracked();
-        Map<String,String> MergeTracked = new TreeMap<>();
-//        先处理只要一个分支不存在，另外一个分支未修改的情况，则删除
-        for (String file:SplitTracked.keySet()) {
-            if (!BranchTracked.containsKey(file) && CurrentTracked.containsKey(file)){
-                if (CurrentTracked.get(file).equals(SplitTracked.get(file))){
-//                    remove it
-                    File f = new File(file);
-                    if (f.exists()){
-                        f.delete();
-                    }
-                    CurrentTracked.remove(file);
-                    SplitTracked.remove(file);
+    }
+
+    // 创建mergeCommit
+    List<String> parents = new ArrayList<>();
+    parents.add(preCommit().getID());
+    parents.add(branchLastCommit.getID());
+    Commit mergeCommit = new Commit(mergeTracked, parents, "Merged " + branch + " into " + CurrentBranch() + ".", CurrentBranch());
+    Utils.writeObject(HEAD_FILE, CurrentBranch());
+    Utils.writeObject(Utils.join(HEADS_DIR, CurrentBranch()), mergeCommit.getID());
+    mergeCommit.save();
+    if (conflict[0]) {
+        System.out.println("Encountered a merge conflict.");
+    }
+}
+
+    private static void handleFileNotExistInBranch(Map<String, String> splitTracked, Map<String, String> currentTracked, Map<String, String> branchTracked, Map<String, String> mergeTracked) {
+        for (String file : splitTracked.keySet()) {
+            String splitBlobID = splitTracked.get(file);
+            String currentBlobID = currentTracked.get(file);
+            String branchBlobID = branchTracked.get(file);
+            if (currentTracked.containsKey(file) && branchTracked.containsKey(file)) {
+                if (splitBlobID.equals(currentBlobID) && !splitBlobID.equals(branchBlobID)) {
+                    mergeTracked.put(file, branchBlobID);
+                    checkout(branchTracked.get(file), file);
+                    add(file);
+                } else if (!splitBlobID.equals(currentBlobID) && splitBlobID.equals(branchBlobID)) {
+                    mergeTracked.put(file, currentBlobID);
                 }
-            }else if (!CurrentTracked.containsKey(file) && BranchTracked.containsKey(file)){
-                if (BranchTracked.get(file).equals(SplitTracked.get(file))){
-//                    remove it
-                    File f = new File(file);
-                    if (f.exists()){
-                        f.delete();
-                    }
-                    BranchTracked.remove(file);
-                    SplitTracked.remove(file);
+            } else if (currentTracked.containsKey(file)) {
+                if (splitBlobID.equals(currentBlobID)) {
+                    rm(file);
+                } else {
+                    mergeTracked.put(file, currentBlobID);
                 }
-            }
-        }
-//        处理一个分支不存在，另一个分支修改了的情况，则发生冲突
-        for (String file:SplitTracked.keySet()) {
-            if (!BranchTracked.containsKey(file) && CurrentTracked.containsKey(file)){
-                if (!CurrentTracked.get(file).equals(SplitTracked.get(file))){
-                    Blob blob = handleConflict(file, CurrentBranch(), branch);
-                    conflict = true;
-                    MergeTracked.put(file,blob.getId());
-                    SplitTracked.remove(file);
-                    CurrentTracked.remove(file);
-                }
-            }else if (!CurrentTracked.containsKey(file) && BranchTracked.containsKey(file)){
-                if (!BranchTracked.get(file).equals(SplitTracked.get(file))){
-                    Blob blob = handleConflict(file, CurrentBranch(), branch);
-                    conflict = true;
-                    MergeTracked.put(file,blob.getId());
-                    SplitTracked.remove(file);
-                    BranchTracked.remove(file);
-                }
-            }
-        }
-//        处理都存在，都修改的情况
-        for (String file:SplitTracked.keySet()) {
-            if (BranchTracked.containsKey(file) && CurrentTracked.containsKey(file)){
-                if (!BranchTracked.get(file).equals(SplitTracked.get(file)) && !CurrentTracked.get(file).equals(SplitTracked.get(file))){
-                    if (!BranchTracked.get(file).equals(CurrentTracked.get(file))){
-                        Blob blob = handleConflict(file, CurrentBranch(), branch);
-                        conflict = true;
-                        MergeTracked.put(file,blob.getId());
-                    }else{
-                        MergeTracked.put(file,BranchTracked.get(file));
-                    }
-                    SplitTracked.remove(file);
-                    BranchTracked.remove(file);
-                    CurrentTracked.remove(file);
+            } else if (branchTracked.containsKey(file)) {
+                if (!splitBlobID.equals(branchBlobID)) {
+                    mergeTracked.put(file, branchBlobID);
+                    checkout(branchTracked.get(file), file);
+                    add(file);
                 }
             }
         }
-//        处理在一个分支中存在，在split和其他分支中都不存在的情况
-        for (String file:CurrentTracked.keySet()) {
-            if (!SplitTracked.containsKey(file) && !BranchTracked.containsKey(file)){
-                MergeTracked.put(file, CurrentTracked.get(file));
+    }
+
+    private static void handleFileModifiedInCurrentBranch(Map<String, String> splitTracked, Map<String, String> currentTracked, Map<String, String> branchTracked, Map<String, String> mergeTracked, boolean []conflict) {
+        for (String file : splitTracked.keySet()) {
+            String splitBlobID = splitTracked.get(file);
+            String currentBlobID = currentTracked.get(file);
+            String branchBlobID = branchTracked.get(file);
+            if (splitTracked.containsKey(file) && currentTracked.containsKey(file) && !branchTracked.containsKey(file)) {
+                if (splitBlobID.equals(currentBlobID)) {
+                    rm(file);
+                } else {
+                    mergeTracked.put(file, currentBlobID);
+                }
+            } else if (splitTracked.containsKey(file) && !currentTracked.containsKey(file) && branchTracked.containsKey(file)) {
+                if (splitBlobID.equals(branchBlobID)) {
+                    rm(file);
+                } else {
+                    mergeTracked.put(file, branchBlobID);
+                    checkout(branchTracked.get(file), file);
+                    add(file);
+                }
             }
         }
-        for (String file : BranchTracked.keySet()){
-            if (!SplitTracked.containsKey(file) && !CurrentTracked.containsKey(file)){
-                MergeTracked.put(file,BranchTracked.get(file));
+    }
+
+    private static void handleFileModifiedInBothBranches(Map<String, String> splitTracked, Map<String, String> currentTracked, Map<String, String> branchTracked, Map<String, String> mergeTracked, boolean []conflict) {
+        for (String file : splitTracked.keySet()) {
+            String splitBlobID = splitTracked.get(file);
+            String currentBlobID = currentTracked.get(file);
+            String branchBlobID = branchTracked.get(file);
+            if (currentTracked.containsKey(file) && branchTracked.containsKey(file)) {
+                if (!splitBlobID.equals(currentBlobID) && !splitBlobID.equals(branchBlobID) && !currentBlobID.equals(branchBlobID)) {
+                    conflict[0] = true;
+                    handleConflict(file, currentBlobID, branchBlobID);
+                } else if (!splitBlobID.equals(currentBlobID) && !splitBlobID.equals(branchBlobID) && currentBlobID.equals(branchBlobID)) {
+                    mergeTracked.put(file, currentBlobID);
+                }
             }
         }
-//        创建mergeCommit
-        List<String> parents = new ArrayList<>();
-        parents.add(preCommit().getID());
-        String branchLastCommitID = readObject(join(HEADS_DIR, branch), String.class);
-        parents.add(branchLastCommitID);
-        Commit mergeCommit = new Commit(MergeTracked,parents,"Merged "+branch+" into "+CurrentBranch()+".",CurrentBranch());
-        mergeCommit.save();
-        if (conflict){
-            Utils.message("Encountered a merge conflict.");
-        }
-        reset(mergeCommit.getID());
+    }
+
+    private static void handleConflict(String fileName, String currentBlobID, String branchBlobID) {
+        File currentBlobFile = join(OBJECT_DIR, currentBlobID);
+        File branchBlobFile = join(OBJECT_DIR, branchBlobID);
+        Blob currentBlob = readObject(currentBlobFile, Blob.class);
+        Blob branchBlob = readObject(branchBlobFile, Blob.class);
+        String currentBlobContent = new String(currentBlob.getContents(), StandardCharsets.UTF_8);
+        String branchBlobContent = new String(branchBlob.getContents(), StandardCharsets.UTF_8);
+        String mergedContent = "<<<<<<< HEAD\n" + currentBlobContent + "=======\n" + branchBlobContent + ">>>>>>>\n";
+        writeContents(join(CWD, fileName), mergedContent);
+        add(fileName);
     }
     private static String findSplitPoint(String otherBranch) {
         Queue<String> q = new LinkedList<>();
-        Map<String, Integer> currentBranchMap = new HashMap<>();
-        Map<String, Integer> otherBranchMap = new HashMap<>();
         String currentBranchID = preCommit().getID();
-        q.add(currentBranchID);
-        int depth1 = 0;
-        currentBranchMap.put(currentBranchID, depth1);
-
-        while (!q.isEmpty()) {
-            String commitID = q.poll();
-            Commit commit = getCommitByID(commitID);
-            List<String> parents = commit.getParents();
-            depth1 += 1;
-            for (String parentID : parents) {
-                if (!currentBranchMap.containsKey(parentID)) { // 避免重复添加
-                    currentBranchMap.put(parentID, depth1);
-                    q.add(parentID);
-                }
-            }
-        }
-
-        q.clear(); // 清空队列以复用
-        depth1 = 0; // 重置深度计数器
+        Map<String, Integer> currentBranchMap = BFS(currentBranchID);
         String otherBranchID = Utils.readObject(Utils.join(HEADS_DIR, otherBranch), String.class);
-        q.add(otherBranchID);
-        int depth2 = 0;
-        while (!q.isEmpty()) {
-            String commitID = q.poll();
-            Commit commit = getCommitByID(commitID);
-            List<String> parents = commit.getParents();
-            depth2 += 1;
-            for (String parentID : parents) {
-                if (!otherBranchMap.containsKey(parentID)) { // 避免重复添加
-                    otherBranchMap.put(parentID, depth2);
-                    q.add(parentID);
-                }
-            }
-        }
-
+        Map<String, Integer> otherBranchMap = BFS(otherBranchID);
+        int min = Integer.MAX_VALUE;
+        String minkey = null;
         for (String key : currentBranchMap.keySet()) {
-            if (otherBranchMap.containsKey(key)) {
-                return key; // 直接返回第一个找到的共同提交ID
+            if (otherBranchMap.containsKey(key) && otherBranchMap.get(key) < min)  {
+//                TODO: test the split point
+//                System.out.println("Found split point: " + getCommitByID(key).getMessage());
+                min = otherBranchMap.get(key);
+                minkey = key; // 直接返回第一个找到的共同提交ID
             }
         }
-        return null; // 如果没有找到共同提交，则返回null
+        return minkey; // 如果没有找到共同提交，则返回null
     }
-
-    private static Blob handleConflict(String file,String currentBranch,String givenBranch) {
-        File f = new File(file);
-        if (f.exists()) {
-            String contents = "<<<<<<< HEAD\n" +
-                    "contents of file in" + currentBranch +"\n" +
-                    "=======\n" +
-                    "contents of file in " + givenBranch + "\n" +
-                    ">>>>>>> ";
-            Utils.writeContents(f, contents);
-            Blob blob = new Blob(file);
-            blob.save();
-            return blob;
-        }else{
-            return null;
+    private static Map<String,Integer> BFS(String commitID) {
+        Map<String,Integer> map = new TreeMap<>();
+        Queue<String> q = new LinkedList<>();
+        q.add(commitID);
+        int depth = 0;
+        map.put(commitID, depth);
+        while (!q.isEmpty()) {
+            String ID = q.poll();
+            Commit commit = getCommitByID(ID);
+            depth += 1;
+            List<String> parents = commit.getParents();
+            for (String parentID : parents) {
+                if (!map.containsKey(parentID)){
+                    map.put(parentID, depth);
+                }
+                q.add(parentID);
+            }
         }
+        return map;
     }
-
+    private static void mergeCommit(String message,String currentBranchID,String otherBranchID,Map<String,String> tracked){
+        List<String> parents = new ArrayList<>();
+        parents.add(currentBranchID);
+        parents.add(otherBranchID);
+        Commit mergeCommit = new Commit(tracked,parents,message,CurrentBranch());
+        Utils.writeObject(HEAD_FILE,CurrentBranch());
+        Utils.writeObject(join(HEADS_DIR,CurrentBranch()),mergeCommit.getID());
+        mergeCommit.save();
+    }
 }

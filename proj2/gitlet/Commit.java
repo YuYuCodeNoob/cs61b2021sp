@@ -82,8 +82,7 @@ public class Commit implements Serializable,Dumpable{
     private String generateID(){
         return Utils.sha1(Date2String(curtime),message,Parents.toString(),Tracked.toString());
     }
-    /* TODO: fill in the rest of this class.
-    *   */
+
     private File generateFileName(){
         return Utils.join(Repository.OBJECT_DIR,ID);
     }
