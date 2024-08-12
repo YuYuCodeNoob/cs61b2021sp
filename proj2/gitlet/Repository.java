@@ -351,7 +351,7 @@ public class Repository implements Serializable {
     }
 
     private static boolean baseJudge(String file){
-        return ((!file.equals("Makefile")) && (!file.equals("pom.xml")) && (!file.equals("gitlet-design.md")) && (!file.equals("clean.sh")));
+        return ((!file.equals("Makefile")) && (!file.equals("pom.xml")) && (!file.equals("gitlet-design.md")) && (!file.endsWith(".sh")));
     }
     private static List<String> getDeleteStageFileList(){
         Stage deleteStage = Utils.readObject(DELETE_STAGE_FILE,Stage.class);
@@ -570,7 +570,14 @@ public static void merge(String branch) {
         System.out.println("A branch with that name does not exist.");
         return;
     }
-
+    Stage addStage = readObject(STAGE_FILE, Stage.class);
+    Stage DeleteStage = readObject(DELETE_STAGE_FILE, Stage.class);
+    if (addStage.getStage().size() > 0 || DeleteStage.getStage().size() > 0){
+        System.out.println("You have uncommitted changes.");
+        return;
+    }
+    String CurrentBranchID = preCommit().getID();
+    String otherBranchID = Utils.readObject(join(HEADS_DIR,branch),String.class);
     String splitPointID = findSplitPoint(branch);
     Commit splitPointCommit = getCommitByID(splitPointID);
     Commit branchLastCommit = getCommitByID(Utils.readObject(Utils.join(HEADS_DIR, branch), String.class));
@@ -585,108 +592,132 @@ public static void merge(String branch) {
         System.out.println("Current branch fast-forwarded.");
         return;
     }
-
     boolean []conflict = {false};
     Map<String, String> splitTracked = splitPointCommit.getTracked();
     Map<String, String> currentTracked = preCommit().getTracked();
     Map<String, String> branchTracked = branchLastCommit.getTracked();
-    Map<String, String> mergeTracked = new TreeMap<>();
-
-    // 处理文件
-    handleFileNotExistInBranch(splitTracked, currentTracked, branchTracked, mergeTracked);
-    handleFileModifiedInCurrentBranch(splitTracked, currentTracked, branchTracked, mergeTracked, conflict);
-    handleFileModifiedInBothBranches(splitTracked, currentTracked, branchTracked, mergeTracked, conflict);
-
-    // 处理在一个分支中存在，而在split和其他分支中都不存在的情况
-    for (String file : currentTracked.keySet()) {
-        if (!splitTracked.containsKey(file) && !branchTracked.containsKey(file)) {
-            mergeTracked.put(file, currentTracked.get(file));
+    Map<String, String> mergeTracked = new TreeMap<>(splitTracked);
+    for (String file : splitTracked.keySet()) {
+        String id = splitTracked.get(file);
+        handle(file,currentTracked,branchTracked,conflict,id);
+        currentTracked.remove(file);
+        branchTracked.remove(file);
+    }
+    for (String key: currentTracked.keySet()) {
+        if (!branchTracked.containsKey(key)){
+            mergeTracked.put(key,currentTracked.get(key));
+        }
+        else if ((branchTracked.containsKey(key))){
+            if (branchTracked.get(key) != currentTracked.get(key)){
+                handleConflict(key,currentTracked.get(key),branchTracked.get(key));
+                conflict[0] = true;
+            }else {
+                mergeTracked.put(key,mergeTracked.get(key));
+            }
+            branchTracked.remove(key);
         }
     }
-    for (String file : branchTracked.keySet()) {
-        if (!splitTracked.containsKey(file) && !currentTracked.containsKey(file)) {
-            mergeTracked.put(file, branchTracked.get(file));
-        }
+    for (String key:branchTracked.keySet()) {
+        mergeTracked.put(key,branchTracked.get(key));
     }
-
     // 创建mergeCommit
-    List<String> parents = new ArrayList<>();
-    parents.add(preCommit().getID());
-    parents.add(branchLastCommit.getID());
-    Commit mergeCommit = new Commit(mergeTracked, parents, "Merged " + branch + " into " + CurrentBranch() + ".", CurrentBranch());
-    Utils.writeObject(HEAD_FILE, CurrentBranch());
-    Utils.writeObject(Utils.join(HEADS_DIR, CurrentBranch()), mergeCommit.getID());
-    mergeCommit.save();
     if (conflict[0]) {
         System.out.println("Encountered a merge conflict.");
     }
+    mergeCommit(CurrentBranchID, otherBranchID, mergeTracked, branch);
 }
-
-    private static void handleFileNotExistInBranch(Map<String, String> splitTracked, Map<String, String> currentTracked, Map<String, String> branchTracked, Map<String, String> mergeTracked) {
-        for (String file : splitTracked.keySet()) {
-            String splitBlobID = splitTracked.get(file);
-            String currentBlobID = currentTracked.get(file);
-            String branchBlobID = branchTracked.get(file);
-            if (currentTracked.containsKey(file) && branchTracked.containsKey(file)) {
-                if (splitBlobID.equals(currentBlobID) && !splitBlobID.equals(branchBlobID)) {
-                    mergeTracked.put(file, branchBlobID);
-                    checkout(branchTracked.get(file), file);
-                    add(file);
-                } else if (!splitBlobID.equals(currentBlobID) && splitBlobID.equals(branchBlobID)) {
-                    mergeTracked.put(file, currentBlobID);
-                }
-            } else if (currentTracked.containsKey(file)) {
-                if (splitBlobID.equals(currentBlobID)) {
-                    rm(file);
-                } else {
-                    mergeTracked.put(file, currentBlobID);
-                }
-            } else if (branchTracked.containsKey(file)) {
-                if (!splitBlobID.equals(branchBlobID)) {
-                    mergeTracked.put(file, branchBlobID);
-                    checkout(branchTracked.get(file), file);
-                    add(file);
+    private static void mergeCommit(String CurrentBranchID,String otherBranchID,Map<String,String> mergeTracked,String givenBranch){
+        List<String> parents = new ArrayList<>();
+        parents.add(CurrentBranchID);
+        parents.add(otherBranchID);
+        Stage stage = readObject(STAGE_FILE, Stage.class);
+        Stage deletestage = readObject(DELETE_STAGE_FILE, Stage.class);
+        Map<String, String> addstageMaps = stage.getStage();
+        Map<String, String> deletestageMaps = deletestage.getStage();
+        Set<String> untrackedSet = getUntrackedSet();
+        for (String key : addstageMaps.keySet())
+        {
+            if (!mergeTracked.containsKey(key)){
+                mergeTracked.put(key,addstageMaps.get(key));
+            }else{
+                mergeTracked.replace(key,addstageMaps.get(key));
+            }
+        }
+        for (String key : deletestageMaps.keySet()) {
+            mergeTracked.remove(key);
+        }
+        List<String> filesList = plainFilenamesIn(CWD);
+        for (String file: filesList) {
+            Blob blob = new Blob(file);
+            if (untrackedSet.contains(file)){
+                if (!blob.getId().equals(mergeTracked.get(file))){
+                    System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+                    clearStage();
+                    return;
                 }
             }
         }
-    }
-
-    private static void handleFileModifiedInCurrentBranch(Map<String, String> splitTracked, Map<String, String> currentTracked, Map<String, String> branchTracked, Map<String, String> mergeTracked, boolean []conflict) {
-        for (String file : splitTracked.keySet()) {
-            String splitBlobID = splitTracked.get(file);
-            String currentBlobID = currentTracked.get(file);
-            String branchBlobID = branchTracked.get(file);
-            if (splitTracked.containsKey(file) && currentTracked.containsKey(file) && !branchTracked.containsKey(file)) {
-                if (splitBlobID.equals(currentBlobID)) {
-                    rm(file);
-                } else {
-                    mergeTracked.put(file, currentBlobID);
-                }
-            } else if (splitTracked.containsKey(file) && !currentTracked.containsKey(file) && branchTracked.containsKey(file)) {
-                if (splitBlobID.equals(branchBlobID)) {
-                    rm(file);
-                } else {
-                    mergeTracked.put(file, branchBlobID);
-                    checkout(branchTracked.get(file), file);
-                    add(file);
-                }
+        String currentBranch = preCommit().getCommitBranch();
+        Commit commit = new Commit(mergeTracked,parents,"Merged " + givenBranch +" into " + currentBranch+".",currentBranch);
+        Utils.writeObject(HEAD_FILE,currentBranch);
+        Utils.writeObject(Utils.join(HEADS_DIR,CurrentBranch()),commit.getID());
+        commit.save();
+        clearStage();
+        for (String file:filesList) {
+            if (baseJudge(file) && (!mergeTracked.containsKey(file))){
+                File f = new File(file);
+                f.delete();
             }
         }
+        for (String file: mergeTracked.keySet()) {
+            File f = new File(file);
+            Blob blob = Utils.readObject(Utils.join(OBJECT_DIR,mergeTracked.get(file)),Blob.class);
+            Utils.writeContents(f,new String(blob.getContents(),StandardCharsets.UTF_8));
+        }
     }
-
-    private static void handleFileModifiedInBothBranches(Map<String, String> splitTracked, Map<String, String> currentTracked, Map<String, String> branchTracked, Map<String, String> mergeTracked, boolean []conflict) {
-        for (String file : splitTracked.keySet()) {
-            String splitBlobID = splitTracked.get(file);
-            String currentBlobID = currentTracked.get(file);
-            String branchBlobID = branchTracked.get(file);
-            if (currentTracked.containsKey(file) && branchTracked.containsKey(file)) {
-                if (!splitBlobID.equals(currentBlobID) && !splitBlobID.equals(branchBlobID) && !currentBlobID.equals(branchBlobID)) {
-                    conflict[0] = true;
-                    handleConflict(file, currentBlobID, branchBlobID);
-                } else if (!splitBlobID.equals(currentBlobID) && !splitBlobID.equals(branchBlobID) && currentBlobID.equals(branchBlobID)) {
-                    mergeTracked.put(file, currentBlobID);
-                }
+    private static void handle(String file, Map<String, String> currentTracked, Map<String, String> branchTracked, boolean[] conflict,String id) {
+        Stage addstage = readObject(STAGE_FILE,Stage.class);
+        Stage deletestage = readObject(DELETE_STAGE_FILE,Stage.class);
+        if (currentTracked.containsKey(file) && branchTracked.containsKey(file) && currentTracked.get(file).equals(branchTracked.get(file))){
+            if (currentTracked.get(file).equals(id)){
+                return;
+            }else {
+                addstage.add(file,currentTracked.get(file));
+                return;
             }
+        }
+        if (currentTracked.containsKey(file) && branchTracked.containsKey(file) && currentTracked.get(file) != branchTracked.get(file)){
+            if (currentTracked.get(file).equals(id)){
+                addstage.add(file, branchTracked.get(file));
+            }else if (branchTracked.get(file).equals(id)){
+                addstage.add(file, currentTracked.get(file));
+            }else {
+                handleConflict(file,currentTracked.get(file),branchTracked.get(file));
+                conflict[0] = true;
+            }
+            return;
+        }
+        if (currentTracked.containsKey(file) && (!branchTracked.containsKey(file))){
+            if(currentTracked.get(file).equals(id)){
+                deletestage.add(file, id);
+            }else {
+                handleConfictWithOneNotExist(file,currentTracked.get(file),true);
+                conflict[0] = true;
+            }
+            return;
+        }
+        if ((!currentTracked.containsKey(file)) && (branchTracked.containsKey(file))){
+            if (branchTracked.get(file).equals(id)){
+                deletestage.add(file,id);
+            }else {
+                handleConfictWithOneNotExist(file,branchTracked.get(file),false);
+                conflict[0] = true;
+            }
+            return;
+        }
+        if ((!currentTracked.containsKey(file)) &&(!branchTracked.containsKey(file))){
+            deletestage.add(file,id);
+            return;
         }
     }
 
@@ -699,6 +730,19 @@ public static void merge(String branch) {
         String branchBlobContent = new String(branchBlob.getContents(), StandardCharsets.UTF_8);
         String mergedContent = "<<<<<<< HEAD\n" + currentBlobContent + "=======\n" + branchBlobContent + ">>>>>>>\n";
         writeContents(join(CWD, fileName), mergedContent);
+        add(fileName);
+    }
+    private static void handleConfictWithOneNotExist(String fileName,String existBlobID,boolean CurrentExist){
+        File currentExistFile = join(OBJECT_DIR,existBlobID);
+        Blob blob = readObject(currentExistFile, Blob.class);
+        String content = new String(blob.getContents(), StandardCharsets.UTF_8);
+        String mergedContent;
+        if (CurrentExist){
+            mergedContent = "<<<<<<< HEAD\n" + content + "=======\n" + ">>>>>>>\n";
+        }else {
+            mergedContent = "<<<<<<< HEAD\n" + "=======\n" + content + ">>>>>>>\n";
+        }
+        writeContents(join(CWD,fileName),mergedContent);
         add(fileName);
     }
     private static String findSplitPoint(String otherBranch) {
@@ -738,14 +782,5 @@ public static void merge(String branch) {
             }
         }
         return map;
-    }
-    private static void mergeCommit(String message,String currentBranchID,String otherBranchID,Map<String,String> tracked){
-        List<String> parents = new ArrayList<>();
-        parents.add(currentBranchID);
-        parents.add(otherBranchID);
-        Commit mergeCommit = new Commit(tracked,parents,message,CurrentBranch());
-        Utils.writeObject(HEAD_FILE,CurrentBranch());
-        Utils.writeObject(join(HEADS_DIR,CurrentBranch()),mergeCommit.getID());
-        mergeCommit.save();
     }
 }
