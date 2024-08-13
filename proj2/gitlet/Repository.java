@@ -554,11 +554,6 @@ public class Repository implements Serializable {
             System.exit(0);
         }
     }
-/**
- *
- * TODO: merge two branch
- */
-    /* TODO: fill in the rest of this class. */
 public static void merge(String branch) {
     // 校验条件
     List<String> branchList = plainFilenamesIn(HEADS_DIR);
@@ -754,10 +749,8 @@ public static void merge(String branch) {
         int min = Integer.MAX_VALUE;
         String minkey = null;
         for (String key : currentBranchMap.keySet()) {
-            if (otherBranchMap.containsKey(key) && otherBranchMap.get(key) < min)  {
-//                TODO: test the split point
-//                System.out.println("Found split point: " + getCommitByID(key).getMessage());
-                min = otherBranchMap.get(key);
+            if (otherBranchMap.containsKey(key) && currentBranchMap.get(key) < min)  {
+                min = currentBranchMap.get(key);
                 minkey = key; // 直接返回第一个找到的共同提交ID
             }
         }
